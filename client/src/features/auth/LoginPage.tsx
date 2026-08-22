@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import type { FC, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, EyeOff, Compass, AlertCircle, CheckCircle2, ArrowRight, ShieldCheck, UserCheck } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, CheckCircle2, ArrowRight, ShieldCheck, UserCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { authApi } from '../../api/authApi';
+import { VoyagoLogo } from '../../components/ui/VoyagoLogo';
 
 interface DestinationSlide {
   image: string;
@@ -119,14 +120,9 @@ export const LoginPage: FC = () => {
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-white text-slate-900 font-body selection:bg-blue-500 selection:text-white">
       {/* LEFT COLUMN: Clean Form Panel */}
       <div className="w-full lg:w-1/2 flex flex-col justify-between p-6 sm:p-10 lg:p-14 xl:p-20 z-10 min-h-screen">
-        {/* Brand Logo Header */}
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
-            <Compass className="w-5 h-5 text-white stroke-[2.2]" />
-          </div>
-          <span className="font-heading font-bold text-xl sm:text-2xl text-slate-900 tracking-tight flex items-center gap-1">
-            GlobeTrotter
-          </span>
+        {/* Voyago Brand Logo Header */}
+        <div className="flex items-center">
+          <VoyagoLogo asLink size="md" />
         </div>
 
         {/* Center Content / Form Container */}

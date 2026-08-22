@@ -1,6 +1,7 @@
 import type { FC } from 'react';
 import { Link } from 'react-router-dom';
-import { Compass, Home, ArrowLeft } from 'lucide-react';
+import { Home, ArrowLeft } from 'lucide-react';
+import { VoyagoIcon } from '../ui/VoyagoLogo';
 import { Navbar } from './Navbar';
 import { Footer } from './Footer';
 
@@ -10,8 +11,8 @@ export const NotFoundPage: FC = () => {
       <Navbar />
 
       <main className="flex-1 max-w-xl w-full mx-auto px-4 py-16 sm:py-24 flex flex-col items-center justify-center text-center">
-        <div className="w-16 h-16 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center mb-6 shadow-sm">
-          <Compass className="w-8 h-8 stroke-[2.2] animate-pulse" />
+        <div className="mb-6 shadow-sm hover:scale-105 transition-transform">
+          <VoyagoIcon size={56} />
         </div>
 
         <h1 className="text-4xl sm:text-5xl font-extrabold font-heading text-slate-900 tracking-tight mb-3">

@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import type { FC, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, EyeOff, Compass, AlertCircle, CheckCircle2, User, Mail, Lock, MapPin, Globe } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, CheckCircle2, User, Mail, Lock, MapPin, Globe } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { authApi } from '../../api/authApi';
+import { VoyagoLogo } from '../../components/ui/VoyagoLogo';
 
 export const SignupPage: FC = () => {
   const navigate = useNavigate();
@@ -64,16 +65,9 @@ export const SignupPage: FC = () => {
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-white text-slate-900 font-body selection:bg-blue-500 selection:text-white">
       {/* LEFT COLUMN: Registration Form */}
       <div className="w-full lg:w-1/2 flex flex-col justify-between p-6 sm:p-10 lg:p-14 xl:p-16 z-10 min-h-screen overflow-y-auto">
-        {/* Brand Logo Header */}
-        <div className="flex items-center gap-2.5">
-          <Link to="/login" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20 group-hover:scale-105 transition-transform">
-              <Compass className="w-5 h-5 text-white stroke-[2.2]" />
-            </div>
-            <span className="font-heading font-bold text-xl sm:text-2xl text-slate-900 tracking-tight">
-              GlobeTrotter
-            </span>
-          </Link>
+        {/* Voyago Brand Logo Header */}
+        <div className="flex items-center">
+          <VoyagoLogo asLink href="/login" size="md" />
         </div>
 
         {/* Center Content / Form */}
