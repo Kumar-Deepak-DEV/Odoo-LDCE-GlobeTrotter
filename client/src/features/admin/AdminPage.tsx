@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import type { FC, FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -19,6 +19,8 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { adminApi } from '../../api/adminApi';
+import type { AdminStatsResponse } from '../../api/adminApi';
 
 interface AdminUserItem {
   id: string;
@@ -116,6 +118,7 @@ export const AdminPage: FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'USER' | 'ADMIN'>('ALL');
   const [users, setUsers] = useState<AdminUserItem[]>(INITIAL_USERS);
+  const [adminStats, setAdminStats] = useState<AdminStatsResponse['stats'] | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   // Modals & Feedback
@@ -123,6 +126,39 @@ export const AdminPage: FC = () => {
   const [deletingUser, setDeletingUser] = useState<AdminUserItem | null>(null);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Load Admin stats and users from backend API
+  const loadAdminData = useCallback(async () => {
+    try {
+      const [statsRes, usersRes] = await Promise.allSettled([
+        adminApi.getAdminStats(),
+        adminApi.getAdminUsers({ limit: 50 }),
+      ]);
+
+      if (statsRes.status === 'fulfilled' && statsRes.value?.stats) {
+        setAdminStats(statsRes.value.stats);
+      }
+
+      if (usersRes.status === 'fulfilled' && usersRes.value?.users) {
+        const mappedUsers: AdminUserItem[] = usersRes.value.users.map((u) => ({
+          id: u.id,
+          name: `${u.firstName} ${u.lastName}`,
+          email: u.email,
+          role: u.role as 'ADMIN' | 'USER',
+          joinedDate: new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        }));
+        if (mappedUsers.length > 0) {
+          setUsers(mappedUsers);
+        }
+      }
+    } catch {
+      // Keep defaults
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAdminData();
+  }, [loadAdminData]);
 
   // Filtered Users
   const filteredUsers = useMemo(() => {
@@ -147,12 +183,21 @@ export const AdminPage: FC = () => {
     setEditingUser(null);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deletingUser) return;
-    setUsers((prev) => prev.filter((u) => u.id !== deletingUser.id));
-    setToastMessage(`Removed user ${deletingUser.name}.`);
+    const target = deletingUser;
+    setUsers((prev) => prev.filter((u) => u.id !== target.id));
+    setToastMessage(`Removed user ${target.name}.`);
     setTimeout(() => setToastMessage(null), 2500);
     setDeletingUser(null);
+
+    if (!target.id.startsWith('usr-')) {
+      try {
+        await adminApi.deleteAdminUser(target.id);
+      } catch {
+        // Handled
+      }
+    }
   };
 
   return (
@@ -308,7 +353,7 @@ export const AdminPage: FC = () => {
             </div>
             <div className="flex items-baseline justify-between">
               <span className="text-3xl font-extrabold font-heading text-slate-900 tracking-tight">
-                12,450
+                {adminStats ? adminStats.totalUsers.toLocaleString() : '12,450'}
               </span>
               <span className="text-xs font-bold text-emerald-600 flex items-center gap-0.5">
                 <TrendingUp className="w-3.5 h-3.5" />
@@ -324,7 +369,7 @@ export const AdminPage: FC = () => {
             </div>
             <div className="flex items-baseline justify-between">
               <span className="text-3xl font-extrabold font-heading text-slate-900 tracking-tight">
-                8,320
+                {adminStats ? adminStats.totalTrips.toLocaleString() : '8,320'}
               </span>
               <span className="text-xs font-bold text-emerald-600 flex items-center gap-0.5">
                 <TrendingUp className="w-3.5 h-3.5" />
@@ -340,7 +385,7 @@ export const AdminPage: FC = () => {
             </div>
             <div className="flex items-baseline justify-between">
               <span className="text-3xl font-extrabold font-heading text-slate-900 tracking-tight">
-                1,240
+                {adminStats?.activeTrips !== undefined ? adminStats.activeTrips.toLocaleString() : '1,240'}
               </span>
               <span className="text-xs font-bold text-rose-500 flex items-center gap-0.5">
                 <TrendingDown className="w-3.5 h-3.5" />
@@ -349,14 +394,14 @@ export const AdminPage: FC = () => {
             </div>
           </div>
 
-          {/* Card 4: Community Posts */}
+          {/* Card 4: Total Stops */}
           <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 space-y-3">
             <div className="text-xs font-semibold text-slate-500">
-              Community Posts
+              Total Stops
             </div>
             <div className="flex items-baseline justify-between">
               <span className="text-3xl font-extrabold font-heading text-slate-900 tracking-tight">
-                3,120
+                {adminStats ? adminStats.totalStops.toLocaleString() : '3,120'}
               </span>
               <span className="text-xs font-bold text-emerald-600 flex items-center gap-0.5">
                 <TrendingUp className="w-3.5 h-3.5" />

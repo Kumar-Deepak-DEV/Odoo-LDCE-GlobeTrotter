@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import type { FC, FormEvent, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -17,10 +17,11 @@ import {
 import { Navbar } from '../../components/layout/Navbar';
 import { Footer } from '../../components/layout/Footer';
 import { useAuth } from '../../context/AuthContext';
+import { userApi } from '../../api/userApi';
 
 export const ProfilePage: FC = () => {
   const navigate = useNavigate();
-  const { user, login } = useAuth();
+  const { user, updateUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Profile Form State
@@ -58,6 +59,29 @@ export const ProfilePage: FC = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  // Fetch fresh profile on mount
+  const loadProfile = useCallback(async () => {
+    try {
+      const res = await userApi.getUserProfile();
+      if (res?.user) {
+        const u = res.user;
+        setFirstName(u.firstName);
+        setLastName(u.lastName);
+        if (u.city) setCity(u.city);
+        if (u.country) setCountry(u.country);
+        if (u.bio) setBio(u.bio);
+        if (u.photoUrl) setAvatarUrl(u.photoUrl);
+        updateUser(u);
+      }
+    } catch {
+      // Keep state
+    }
+  }, [updateUser]);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+
   const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -69,21 +93,36 @@ export const ProfilePage: FC = () => {
     }
   };
 
-  const handleProfileSubmit = (e: FormEvent) => {
+  const handleProfileSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSaveSuccess(true);
 
-    if (user) {
-      const updatedUser = {
-        ...user,
-        firstName,
-        lastName,
-        city,
-        country,
-        bio,
+    try {
+      const res = await userApi.updateUserProfile({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        city: city.trim(),
+        country: country.trim(),
+        bio: bio.trim(),
         photoUrl: avatarUrl,
-      };
-      login(localStorage.getItem('globetrotter_token') || 'token', updatedUser);
+      });
+
+      if (res?.user) {
+        updateUser(res.user);
+      }
+    } catch {
+      // Update local context
+      if (user) {
+        updateUser({
+          ...user,
+          firstName,
+          lastName,
+          city,
+          country,
+          bio,
+          photoUrl: avatarUrl,
+        });
+      }
     }
 
     setTimeout(() => {
