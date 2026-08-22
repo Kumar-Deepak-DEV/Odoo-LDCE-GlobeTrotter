@@ -426,9 +426,9 @@ As defined in the project PRD for the hackathon MVP milestone:
 
 Built with ❤️ for the **Odoo-LDCE Hackathon 2024 / 2025**.
 
-- **[Deepak Kumar]** — *[Full Stack Development / Frontend & UI Design]*
-- **[Team Member Name]** — *[Role / Backend & Database Architecture]*
-- **[Team Member Name]** — *[Role / Product & API Integration]*
+- **[Deepak Kumar]** — *[Backend Developer]*
+- **[Mayank Lumbhani]** — *[Tester / Database Architecture]*
+- **[Aditya Kumar]** — *[Frontend Developer ]*
 
 ---
 
