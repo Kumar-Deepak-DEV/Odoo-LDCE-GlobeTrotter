@@ -49,84 +49,16 @@ interface StopSection {
   activities: ActivityItem[];
 }
 
-const DEFAULT_BUILDER_STOPS: StopSection[] = [
-  {
-    id: 'stop-paris',
-    city: 'Paris',
-    country: 'France',
-    dateRange: 'Oct 12 - Oct 15',
-    startDate: '2024-10-12',
-    endDate: '2024-10-15',
-    estimatedBudget: 1200,
-    activities: [
-      {
-        id: 'act-1',
-        name: 'Louvre Museum Tour',
-        dayNumber: 1,
-        durationMin: 90,
-        cost: 45,
-        category: 'museum',
-        categoryColor: '#F97316',
-      },
-      {
-        id: 'act-2',
-        name: 'Dinner at Le Jules Verne',
-        dayNumber: 1,
-        durationMin: 120,
-        cost: 250,
-        category: 'food',
-        categoryColor: '#EF4444',
-      },
-      {
-        id: 'act-3',
-        name: 'Montmartre Walking Tour',
-        dayNumber: 2,
-        durationMin: 180,
-        cost: 0,
-        isFree: true,
-        category: 'walking',
-        categoryColor: '#14B8A6',
-      },
-    ],
-  },
-  {
-    id: 'stop-london',
-    city: 'London',
-    country: 'United Kingdom',
-    dateRange: 'Oct 16 - Oct 19',
-    startDate: '2024-10-16',
-    endDate: '2024-10-19',
-    estimatedBudget: 1500,
-    activities: [
-      {
-        id: 'act-4',
-        name: 'West End Show: Les Misérables',
-        dayNumber: 4,
-        durationMin: 160,
-        cost: 120,
-        category: 'entertainment',
-        categoryColor: '#F97316',
-      },
-      {
-        id: 'act-5',
-        name: 'Tower of London',
-        dayNumber: 5,
-        durationMin: 120,
-        cost: 35,
-        category: 'landmark',
-        categoryColor: '#14B8A6',
-      },
-    ],
-  },
-];
+
 
 export const ItineraryBuilderPage: FC = () => {
   const { id } = useParams<{ id?: string }>();
 
-  const [tripTitle, setTripTitle] = useState('European Adventure');
-  const [tripDates, setTripDates] = useState('Oct 12 - Oct 25, 2024');
-  const [tripDuration, setTripDuration] = useState('14 Days');
-  const [stops, setStops] = useState<StopSection[]>(DEFAULT_BUILDER_STOPS);
+  const [tripTitle, setTripTitle] = useState('My Trip');
+  const [tripDates, setTripDates] = useState('');
+  const [tripDuration, setTripDuration] = useState('');
+  const [stops, setStops] = useState<StopSection[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [shareSlug, setShareSlug] = useState<string | null>(null);
 
   // Modals state
@@ -164,7 +96,8 @@ export const ItineraryBuilderPage: FC = () => {
 
   // Load real trip details from Backend API
   const loadTripData = useCallback(async () => {
-    if (!id) return;
+    if (!id) { setIsLoading(false); return; }
+    setIsLoading(true);
     try {
       const data = await tripApi.getTripById(id);
       if (data?.trip) {
@@ -217,6 +150,8 @@ export const ItineraryBuilderPage: FC = () => {
       if (found?.name) {
         setTripTitle(found.name);
       }
+    } finally {
+      setIsLoading(false);
     }
   }, [id]);
 
@@ -454,7 +389,17 @@ export const ItineraryBuilderPage: FC = () => {
 
         {/* STOPS LIST SECTIONS */}
         <div className="space-y-6">
-          {stops.map((stop, stopIndex) => (
+          {isLoading ? (
+            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 text-sm animate-pulse">
+              Loading your itinerary...
+            </div>
+          ) : stops.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center flex flex-col items-center gap-3 text-slate-400">
+              <p className="text-sm font-medium">No stops added yet.</p>
+              <p className="text-xs">Click <strong className="text-blue-600">Add Another Stop</strong> below to begin building your itinerary!</p>
+            </div>
+          ) : null}
+          {!isLoading && stops.map((stop, stopIndex) => (
             <div key={stop.id} className="relative flex items-start gap-3 group">
               {/* External Left 6-Dot Drag Handle */}
               <div className="hidden sm:flex pt-6 text-slate-400 hover:text-slate-600 cursor-grab">
@@ -865,7 +810,7 @@ export const ItineraryBuilderPage: FC = () => {
             {/* Stylized Visual Route Map */}
             <div className="relative aspect-[16/9] bg-gradient-to-br from-slate-900 via-slate-800 to-blue-950 p-8 flex flex-col justify-between overflow-hidden">
               <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#2563EB_1px,transparent_1px)] [background-size:16px_16px]" />
-              
+
               <div className="relative z-10 flex items-center justify-between h-full px-6">
                 {/* Stop 1 Pin */}
                 <div className="flex flex-col items-center gap-2 text-center animate-fadeIn">

@@ -25,6 +25,7 @@ const envSchema = z.object({
   DEMO_SEED_PASSWORD: z.string().min(6).optional(),
   GEODB_API_KEY: z.string().optional().default(''),
   GEODB_HOST: z.string().optional().default('wft-geo-db.p.rapidapi.com'),
+  UNSPLASH_API_KEY: z.string().optional().default(''),
 });
 
 const parseEnv = () => {

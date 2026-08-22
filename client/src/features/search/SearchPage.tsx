@@ -232,7 +232,7 @@ export const SearchPage: FC = () => {
   const [liveActivities, setLiveActivities] = useState<ActivitySearchItem[]>(ACTIVITIES_DATA);
 
   // Filter States
-  const [selectedRegion, setSelectedRegion] = useState<'all' | 'Europe' | 'Asia' | 'Americas'>('all');
+  const [selectedRegion, setSelectedRegion] = useState<'all' | 'Europe' | 'Asia' | 'Americas' | 'India'>('all');
   const [selectedCost, setSelectedCost] = useState<'all' | '$' | '$$' | '$$$'>('all');
   const [showRegionDropdown, setShowRegionDropdown] = useState(false);
   const [showMoreFiltersModal, setShowMoreFiltersModal] = useState(false);
@@ -274,7 +274,7 @@ export const SearchPage: FC = () => {
       try {
         if (activeTab === 'cities') {
           const res = await cityApi.searchCities(searchQuery.trim());
-          if (res?.cities && res.cities.length > 0) {
+          if (res?.cities) {
             const formatted: CityItem[] = res.cities.map((c, i) => ({
               id: c.id || `city-live-${i}`,
               name: c.name,
@@ -289,7 +289,7 @@ export const SearchPage: FC = () => {
           }
         } else {
           const res = await activityApi.searchActivities({ q: searchQuery.trim() });
-          if (res?.activities && res.activities.length > 0) {
+          if (res?.activities) {
             const formatted: ActivitySearchItem[] = res.activities.map((a) => ({
               id: a.id,
               name: a.name,
@@ -310,7 +310,7 @@ export const SearchPage: FC = () => {
       }
     };
 
-    const timer = setTimeout(fetchLiveResults, 300);
+    const timer = setTimeout(fetchLiveResults, 1500);
     return () => clearTimeout(timer);
   }, [searchQuery, activeTab]);
 
@@ -332,7 +332,9 @@ export const SearchPage: FC = () => {
       const matchesSearch =
         city.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         city.country.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesRegion = selectedRegion === 'all' || city.region === selectedRegion;
+      const matchesRegion = selectedRegion === 'all' ||
+        city.region === selectedRegion ||
+        (selectedRegion === 'India' && city.country.toLowerCase() === 'india');
       const matchesCost = selectedCost === 'all' || city.costLevel === selectedCost;
       return matchesSearch && matchesRegion && matchesCost;
     });
@@ -345,7 +347,9 @@ export const SearchPage: FC = () => {
         act.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         act.cityName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         act.country.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesRegion = selectedRegion === 'all' || act.region === selectedRegion;
+      const matchesRegion = selectedRegion === 'all' ||
+        act.region === selectedRegion ||
+        (selectedRegion === 'India' && act.country.toLowerCase() === 'india');
       return matchesSearch && matchesRegion;
     });
   }, [liveActivities, searchQuery, selectedRegion]);
@@ -369,22 +373,20 @@ export const SearchPage: FC = () => {
             <button
               type="button"
               onClick={() => setActiveTab('cities')}
-              className={`px-8 py-2 rounded-full text-sm font-semibold transition-all cursor-pointer ${
-                activeTab === 'cities'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className={`px-8 py-2 rounded-full text-sm font-semibold transition-all cursor-pointer ${activeTab === 'cities'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+                }`}
             >
               Cities
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('activities')}
-              className={`px-8 py-2 rounded-full text-sm font-semibold transition-all cursor-pointer ${
-                activeTab === 'activities'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className={`px-8 py-2 rounded-full text-sm font-semibold transition-all cursor-pointer ${activeTab === 'activities'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+                }`}
             >
               Activities
             </button>
@@ -425,11 +427,10 @@ export const SearchPage: FC = () => {
               <button
                 type="button"
                 onClick={() => setShowRegionDropdown(!showRegionDropdown)}
-                className={`px-4 py-3 rounded-2xl border text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-xs ${
-                  selectedRegion !== 'all'
-                    ? 'bg-blue-50 border-blue-500 text-blue-700'
-                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                }`}
+                className={`px-4 py-3 rounded-2xl border text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-xs ${selectedRegion !== 'all'
+                  ? 'bg-blue-50 border-blue-500 text-blue-700'
+                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                  }`}
               >
                 <Globe className="w-4 h-4 text-slate-500" />
                 <span>
@@ -447,7 +448,7 @@ export const SearchPage: FC = () => {
                     onClick={() => setShowRegionDropdown(false)}
                   />
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-40 animate-fadeIn">
-                    {(['all', 'Europe', 'Asia', 'Americas'] as const).map((r) => (
+                    {(['all', 'Europe', 'Asia', 'Americas', 'India'] as const).map((r) => (
                       <button
                         key={r}
                         type="button"
@@ -470,11 +471,10 @@ export const SearchPage: FC = () => {
             <button
               type="button"
               onClick={() => setShowMoreFiltersModal(true)}
-              className={`px-4 py-3 rounded-2xl border text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-xs ${
-                selectedCost !== 'all'
-                  ? 'bg-blue-50 border-blue-500 text-blue-700'
-                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-              }`}
+              className={`px-4 py-3 rounded-2xl border text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-xs ${selectedCost !== 'all'
+                ? 'bg-blue-50 border-blue-500 text-blue-700'
+                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
             >
               <SlidersHorizontal className="w-4 h-4 text-slate-500" />
               <span>More Filters</span>
@@ -517,11 +517,10 @@ export const SearchPage: FC = () => {
                       className="absolute top-3.5 right-3.5 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-slate-700 hover:text-red-500 flex items-center justify-center shadow-md backdrop-blur-xs transition-all cursor-pointer"
                     >
                       <Heart
-                        className={`w-4 h-4 transition-colors ${
-                          isFav
-                            ? 'fill-red-500 text-red-500'
-                            : 'text-slate-600 hover:text-red-500'
-                        }`}
+                        className={`w-4 h-4 transition-colors ${isFav
+                          ? 'fill-red-500 text-red-500'
+                          : 'text-slate-600 hover:text-red-500'
+                          }`}
                       />
                     </button>
                   </div>
@@ -590,11 +589,10 @@ export const SearchPage: FC = () => {
                       className="absolute top-3.5 right-3.5 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-slate-700 hover:text-red-500 flex items-center justify-center shadow-md backdrop-blur-xs transition-all cursor-pointer"
                     >
                       <Heart
-                        className={`w-4 h-4 transition-colors ${
-                          isFav
-                            ? 'fill-red-500 text-red-500'
-                            : 'text-slate-600 hover:text-red-500'
-                        }`}
+                        className={`w-4 h-4 transition-colors ${isFav
+                          ? 'fill-red-500 text-red-500'
+                          : 'text-slate-600 hover:text-red-500'
+                          }`}
                       />
                     </button>
                   </div>
@@ -731,11 +729,10 @@ export const SearchPage: FC = () => {
                       key={tier}
                       type="button"
                       onClick={() => setSelectedCost(tier)}
-                      className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                        selectedCost === tier
-                          ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
-                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                      }`}
+                      className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${selectedCost === tier
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
                     >
                       {tier === 'all' ? 'All' : tier}
                     </button>
@@ -749,16 +746,15 @@ export const SearchPage: FC = () => {
                   Region
                 </label>
                 <div className="grid grid-cols-3 gap-2">
-                  {(['all', 'Europe', 'Asia', 'Americas'] as const).map((r) => (
+                  {(['all', 'Europe', 'Asia', 'Americas', 'India'] as const).map((r) => (
                     <button
                       key={r}
                       type="button"
                       onClick={() => setSelectedRegion(r)}
-                      className={`py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
-                        selectedRegion === r
-                          ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
-                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                      }`}
+                      className={`py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${selectedRegion === r
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
                     >
                       {r === 'all' ? 'All' : r}
                     </button>

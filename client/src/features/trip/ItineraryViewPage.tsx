@@ -273,11 +273,10 @@ export const ItineraryViewPage: FC = () => {
             <button
               type="button"
               onClick={() => setViewMode('list')}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                viewMode === 'list'
+              className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${viewMode === 'list'
                   ? 'bg-blue-50 text-blue-600 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
-              }`}
+                }`}
             >
               <ListIcon className="w-4 h-4" />
               <span>List</span>
@@ -285,11 +284,10 @@ export const ItineraryViewPage: FC = () => {
             <button
               type="button"
               onClick={() => setViewMode('calendar')}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                viewMode === 'calendar'
+              className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${viewMode === 'calendar'
                   ? 'bg-blue-50 text-blue-600 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
-              }`}
+                }`}
             >
               <CalendarIcon className="w-4 h-4" />
               <span>Calendar</span>
@@ -372,16 +370,14 @@ export const ItineraryViewPage: FC = () => {
                   <div className="flex items-center gap-3">
                     {/* Concentric Bullseye Node */}
                     <div
-                      className={`w-5 h-5 rounded-full flex items-center justify-center border-4 ${
-                        index === 0
+                      className={`w-5 h-5 rounded-full flex items-center justify-center border-4 ${index === 0
                           ? 'border-teal-500 bg-white ring-2 ring-teal-100'
                           : 'border-slate-300 bg-white'
-                      }`}
+                        }`}
                     >
                       <div
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          index === 0 ? 'bg-teal-500' : 'bg-slate-400'
-                        }`}
+                        className={`w-1.5 h-1.5 rounded-full ${index === 0 ? 'bg-teal-500' : 'bg-slate-400'
+                          }`}
                       />
                     </div>
 
@@ -439,11 +435,10 @@ export const ItineraryViewPage: FC = () => {
                         {/* Right: Cost Pill Badge */}
                         <div className="shrink-0">
                           <span
-                            className={`px-3.5 py-1.5 rounded-full text-xs font-bold ${
-                              act.isFree
+                            className={`px-3.5 py-1.5 rounded-full text-xs font-bold ${act.isFree
                                 ? 'bg-slate-100 text-slate-700'
                                 : 'bg-[#FFF7ED] text-[#EA580C] border border-[#FFEDD5]'
-                            }`}
+                              }`}
                           >
                             {act.isFree ? 'Free' : `$${act.cost}`}
                           </span>
@@ -480,9 +475,8 @@ export const ItineraryViewPage: FC = () => {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-slate-300 font-medium">Balance</span>
                     <span
-                      className={`font-bold text-base ${
-                        balance < 0 ? 'text-[#F87171]' : 'text-emerald-400'
-                      }`}
+                      className={`font-bold text-base ${balance < 0 ? 'text-[#F87171]' : 'text-emerald-400'
+                        }`}
                     >
                       {balance < 0
                         ? `-$${Math.abs(balance).toLocaleString()}`
@@ -575,36 +569,39 @@ export const ItineraryViewPage: FC = () => {
                 Itinerary Timeline Calendar
               </h3>
               <span className="text-xs font-semibold text-slate-500">
-                Oct 12 – Oct 25, 2024
+                {tripDates}
               </span>
             </div>
 
-            {/* Interactive Timeline Calendar Grid */}
+            {/* Dynamic Calendar Grid from real stops */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {[
-                { day: 1, date: 'Oct 12', city: 'Paris', title: 'Louvre Museum Tour', cost: '$45', time: '120 min' },
-                { day: 2, date: 'Oct 13', city: 'Paris', title: 'Eiffel Tower Dinner', cost: '$180', time: '150 min' },
-                { day: 3, date: 'Oct 14', city: 'London', title: 'Westminster Walk', cost: 'Free', time: '90 min' },
-                { day: 4, date: 'Oct 15', city: 'London', title: 'Tower of London & Crown Jewels', cost: '$35', time: '120 min' },
-                { day: 5, date: 'Oct 16', city: 'London', title: 'West End Musical', cost: '$120', time: '160 min' },
-              ].map((item) => (
-                <div
-                  key={item.day}
-                  className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-2 hover:bg-blue-50/50 hover:border-blue-200 transition-all"
-                >
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-blue-600 bg-blue-100/60 px-2 py-0.5 rounded-md">
-                      Day {item.day} • {item.date}
-                    </span>
-                    <span className="font-semibold text-slate-700">{item.city}</span>
+              {stops.flatMap((stop) =>
+                stop.activities.map((act) => (
+                  <div
+                    key={act.id}
+                    className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-2 hover:bg-blue-50/50 hover:border-blue-200 transition-all"
+                  >
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-blue-600 bg-blue-100/60 px-2 py-0.5 rounded-md">
+                        Day {act.dayNumber}
+                      </span>
+                      <span className="font-semibold text-slate-700">{stop.cityName}</span>
+                    </div>
+                    <h4 className="font-bold text-slate-900 text-sm">{act.name}</h4>
+                    <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-200/60">
+                      <span>{act.durationMin} min</span>
+                      <span className="font-bold text-slate-800">
+                        {act.isFree ? 'Free' : `$${act.cost}`}
+                      </span>
+                    </div>
                   </div>
-                  <h4 className="font-bold text-slate-900 text-sm">{item.title}</h4>
-                  <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-200/60">
-                    <span>{item.time}</span>
-                    <span className="font-bold text-slate-800">{item.cost}</span>
-                  </div>
+                ))
+              )}
+              {stops.flatMap(s => s.activities).length === 0 && (
+                <div className="col-span-3 text-center py-10 text-slate-400 text-sm">
+                  No activities added yet. Use the builder to add activities to your stops!
                 </div>
-              ))}
+              )}
             </div>
           </div>
         )}
@@ -652,11 +649,10 @@ export const ItineraryViewPage: FC = () => {
                 <div className="flex justify-between text-slate-600">
                   <span>New Balance:</span>
                   <span
-                    className={`font-bold ${
-                      tempBudget - calculatedTotalCost < 0
+                    className={`font-bold ${tempBudget - calculatedTotalCost < 0
                         ? 'text-red-600'
                         : 'text-emerald-600'
-                    }`}
+                      }`}
                   >
                     ${tempBudget - calculatedTotalCost}
                   </span>

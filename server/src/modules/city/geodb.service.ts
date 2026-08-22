@@ -30,6 +30,7 @@ interface GeoDBCityResponseItem {
 }
 
 const staticCities: CityData[] = popularCitiesData as CityData[];
+const imageCache: Record<string, string> = {};
 
 export class GeoDBService {
   /**
@@ -65,26 +66,52 @@ export class GeoDBService {
         );
 
         if (response.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
-          return response.data.data.map((item) => {
-            const matchedStatic = staticCities.find(
-              (c) => c.name.toLowerCase() === item.name.toLowerCase()
-            );
+          const cities = response.data.data;
+          const results: CityData[] = [];
 
-            return {
+          for (const item of cities) {
+            const cacheKey = item.name.toLowerCase();
+            const matchedStatic = staticCities.find((c) => c.name.toLowerCase() === cacheKey);
+
+            let image = matchedStatic?.image || imageCache[cacheKey];
+
+            if (!image && env.UNSPLASH_API_KEY) {
+              try {
+                const unsplashRes = await axios.get(`https://api.unsplash.com/search/photos`, {
+                  params: { query: `${item.city || item.name} city landmarks`, orientation: 'landscape', per_page: 1 },
+                  headers: { Authorization: `Client-ID ${env.UNSPLASH_API_KEY}` },
+                  timeout: 2500,
+                });
+                if (unsplashRes.data?.results?.length > 0) {
+                  image = unsplashRes.data.results[0].urls.regular;
+                  imageCache[cacheKey] = image as string; // Cache the successful result
+                }
+              } catch (e: any) {
+                if (e.response?.status === 403) {
+                  console.warn('Unsplash rate limit hit. Using dynamic placeholder fallback.');
+                }
+              }
+            }
+
+            // Secondary dynamic fallback if Unsplash rate limits us or key isn't provided
+            if (!image) {
+              image = `https://loremflickr.com/800/600/${encodeURIComponent(item.city || item.name)},landmark/all`;
+            }
+
+            results.push({
               id: `${item.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${item.countryCode.toLowerCase()}`,
               name: item.city || item.name,
               country: item.country,
               countryCode: item.countryCode,
               lat: item.latitude,
               lng: item.longitude,
-              image:
-                matchedStatic?.image ||
-                `https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=800&q=80`,
-              description:
-                matchedStatic?.description || `Explore the sights and culture of ${item.name}, ${item.country}.`,
+              image,
+              description: matchedStatic?.description || `Explore the sights and culture of ${item.name}, ${item.country}.`,
               popularAttractions: matchedStatic?.popularAttractions || [],
-            };
-          });
+            });
+          }
+
+          return results;
         }
       } catch (err) {
         console.warn('GeoDB API search error, falling back to local dataset:', (err as Error).message);
