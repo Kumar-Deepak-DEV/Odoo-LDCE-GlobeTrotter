@@ -8,6 +8,7 @@ import { MyTripsPage } from '../features/trip/MyTripsPage';
 import { CreateTripPage } from '../features/trip/CreateTripPage';
 import { ItineraryBuilderPage } from '../features/trip/ItineraryBuilderPage';
 import { ItineraryViewPage } from '../features/trip/ItineraryViewPage';
+import { SharedTripPage } from '../features/trip/SharedTripPage';
 import { SearchPage } from '../features/search/SearchPage';
 import { CalendarPage } from '../features/calendar/CalendarPage';
 import { CommunityPage } from '../features/community/CommunityPage';
@@ -32,6 +33,9 @@ export const AppRoutes: FC = () => {
       <Route path="/trips/new" element={<CreateTripPage />} />
       <Route path="/trips/:id/builder" element={<ItineraryBuilderPage />} />
       <Route path="/trips/:id" element={<ItineraryViewPage />} />
+      <Route path="/trips/:id/public" element={<SharedTripPage />} />
+      <Route path="/trips/share/:id" element={<SharedTripPage />} />
+      <Route path="/share/:id" element={<SharedTripPage />} />
 
       {/* Search, Calendar, Community, Profile, Admin */}
       <Route path="/search" element={<SearchPage />} />
