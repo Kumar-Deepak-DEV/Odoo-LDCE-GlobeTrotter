@@ -21,6 +21,13 @@ import { CommunityPage } from '../features/community/CommunityPage';
 import { ProfilePage } from '../features/profile/ProfilePage';
 import { AdminDashboardPage } from '../features/admin/AdminDashboardPage';
 
+// Static Info & Legal Pages
+import { PrivacyPage } from '../features/static/PrivacyPage';
+import { TermsPage } from '../features/static/TermsPage';
+import { SupportPage } from '../features/static/SupportPage';
+import { ContactPage } from '../features/static/ContactPage';
+import { AboutPage } from '../features/static/AboutPage';
+
 // Root redirect helper component
 const RootRedirect: FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -45,6 +52,13 @@ export const AppRoutes: FC = () => {
       {/* Public Auth Routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<RegisterPage />} />
+
+      {/* Public Info & Legal Pages */}
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/support" element={<SupportPage />} />
+      <Route path="/contact" element={<ContactPage />} />
+      <Route path="/about" element={<AboutPage />} />
 
       {/* Public Shared Itinerary Routes */}
       <Route path="/share/:slug" element={<SharedItineraryPage />} />
