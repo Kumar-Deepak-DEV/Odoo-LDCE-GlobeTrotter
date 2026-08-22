@@ -14,6 +14,8 @@ import {
   X,
   TrendingDown,
   ChevronRight,
+  Share2,
+  Users,
 } from 'lucide-react';
 import { Navbar } from '../../components/layout/Navbar';
 import { Footer } from '../../components/layout/Footer';
@@ -218,8 +220,8 @@ export const ItineraryViewPage: FC = () => {
           </div>
         )}
 
-        {/* TRIP TITLE & DATES */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2">
+        {/* TRIP TITLE, DATES & ACTION BAR */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2">
           <div>
             <h1 className="text-3xl sm:text-4xl lg:text-[42px] font-extrabold font-heading text-slate-900 tracking-tight">
               {tripTitle}
@@ -230,13 +232,48 @@ export const ItineraryViewPage: FC = () => {
             </div>
           </div>
 
-          <Link
-            to={`/trips/${id || '1'}/builder`}
-            className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 self-start sm:self-auto"
-          >
-            Edit Itinerary Builder
-            <ChevronRight className="w-3.5 h-3.5" />
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Share Trip Button */}
+            <button
+              type="button"
+              onClick={() => {
+                const shareUrl = `${window.location.origin}/share/${id || 'demo-trip-1'}`;
+                navigator.clipboard.writeText(shareUrl);
+                alert(`Public trip link copied: ${shareUrl}`);
+              }}
+              className="px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <Share2 className="w-3.5 h-3.5 text-slate-500" />
+              <span>Share Trip</span>
+            </button>
+
+            {/* View on Calendar Link */}
+            <Link
+              to="/calendar"
+              className="px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-2xs"
+            >
+              <CalendarIcon className="w-3.5 h-3.5 text-teal-600" />
+              <span>View on Calendar</span>
+            </Link>
+
+            {/* Post to Community Button */}
+            <Link
+              to="/community"
+              className="px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-2xs"
+            >
+              <Users className="w-3.5 h-3.5 text-amber-600" />
+              <span>Post to Community</span>
+            </Link>
+
+            {/* Edit Itinerary Builder */}
+            <Link
+              to={`/trips/${id || '1'}/builder`}
+              className="px-3.5 py-2 bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-xl flex items-center gap-1 shadow-2xs"
+            >
+              <span>Edit Builder</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
 
         {/* MAIN 2-COLUMN VIEW CONTENT */}

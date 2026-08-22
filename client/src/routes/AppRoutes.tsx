@@ -1,51 +1,142 @@
 import type { FC } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
+// Protected Route Wrapper
+import { ProtectedRoute } from '../components/layout/ProtectedRoute';
+import { NotFoundPage } from '../components/layout/NotFoundPage';
+
+// Feature Pages
 import { LoginPage } from '../features/auth/LoginPage';
-import { SignupPage } from '../features/auth/SignupPage';
+import { RegisterPage } from '../features/auth/RegisterPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { MyTripsPage } from '../features/trip/MyTripsPage';
 import { CreateTripPage } from '../features/trip/CreateTripPage';
 import { ItineraryBuilderPage } from '../features/trip/ItineraryBuilderPage';
 import { ItineraryViewPage } from '../features/trip/ItineraryViewPage';
-import { SharedTripPage } from '../features/trip/SharedTripPage';
+import { SharedItineraryPage } from '../features/trip/SharedItineraryPage';
 import { SearchPage } from '../features/search/SearchPage';
 import { CalendarPage } from '../features/calendar/CalendarPage';
 import { CommunityPage } from '../features/community/CommunityPage';
 import { ProfilePage } from '../features/profile/ProfilePage';
-import { AdminPage } from '../features/admin/AdminPage';
+import { AdminDashboardPage } from '../features/admin/AdminDashboardPage';
+
+// Root redirect helper component
+const RootRedirect: FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />;
+};
 
 export const AppRoutes: FC = () => {
   return (
     <Routes>
       {/* Root redirect */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<RootRedirect />} />
 
-      {/* Auth routes */}
+      {/* Public Auth Routes */}
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
+      <Route path="/signup" element={<RegisterPage />} />
 
-      {/* Dashboard */}
-      <Route path="/dashboard" element={<DashboardPage />} />
+      {/* Public Shared Itinerary Routes */}
+      <Route path="/share/:slug" element={<SharedItineraryPage />} />
+      <Route path="/trips/:id/public" element={<SharedItineraryPage />} />
+      <Route path="/trips/share/:id" element={<SharedItineraryPage />} />
 
-      {/* Trips routes */}
-      <Route path="/trips" element={<MyTripsPage />} />
-      <Route path="/trips/new" element={<CreateTripPage />} />
-      <Route path="/trips/:id/builder" element={<ItineraryBuilderPage />} />
-      <Route path="/trips/:id" element={<ItineraryViewPage />} />
-      <Route path="/trips/:id/public" element={<SharedTripPage />} />
-      <Route path="/trips/share/:id" element={<SharedTripPage />} />
-      <Route path="/share/:id" element={<SharedTripPage />} />
+      {/* Protected Routes */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/trips"
+        element={
+          <ProtectedRoute>
+            <MyTripsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/trips/new"
+        element={
+          <ProtectedRoute>
+            <CreateTripPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/trips/:id/builder"
+        element={
+          <ProtectedRoute>
+            <ItineraryBuilderPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/trips/:id"
+        element={
+          <ProtectedRoute>
+            <ItineraryViewPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/search"
+        element={
+          <ProtectedRoute>
+            <SearchPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/calendar"
+        element={
+          <ProtectedRoute>
+            <CalendarPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/community"
+        element={
+          <ProtectedRoute>
+            <CommunityPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
 
-      {/* Search, Calendar, Community, Profile, Admin */}
-      <Route path="/search" element={<SearchPage />} />
-      <Route path="/calendar" element={<CalendarPage />} />
-      <Route path="/community" element={<CommunityPage />} />
-      <Route path="/profile" element={<ProfilePage />} />
-      <Route path="/admin" element={<AdminPage />} />
+      {/* Admin Route (Protected + Admin Role required) */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminDashboardPage />
+          </ProtectedRoute>
+        }
+      />
 
-      {/* Catch-all fallback */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      {/* Catch-all 404 Not Found */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 };
