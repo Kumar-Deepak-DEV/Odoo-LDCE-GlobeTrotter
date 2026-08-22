@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { FC } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Navbar } from '../../components/layout/Navbar';
 import { Footer } from '../../components/layout/Footer';
+import { tripApi } from '../../api/tripApi';
 
 export interface CalendarTrip {
   id: string;
@@ -88,35 +89,30 @@ export const CalendarPage: FC = () => {
 
   // Month Date State (Default Jan 2024 matching reference mockup)
   const [currentDate, setCurrentDate] = useState<Date>(new Date(2024, 0, 1));
-  const [allTrips] = useState<CalendarTrip[]>(() => {
-    try {
-      const savedCustom = JSON.parse(
-        localStorage.getItem('globetrotter_custom_trips') || '[]'
-      );
-      if (Array.isArray(savedCustom) && savedCustom.length > 0) {
-        const mapped: CalendarTrip[] = savedCustom.map((t: {
-          id: string;
-          name?: string;
-          title?: string;
-          startDate?: string;
-          endDate?: string;
-          status?: 'ongoing' | 'upcoming' | 'completed';
-        }) => ({
-          id: t.id,
-          title: t.name || t.title || 'Custom Adventure',
-          subtitle: 'Custom Day Exploration',
-          startDate: t.startDate ? t.startDate.split('T')[0] : '2024-01-10',
-          endDate: t.endDate ? t.endDate.split('T')[0] : '2024-01-16',
-          status: t.status || 'upcoming',
-          color: t.status === 'ongoing' ? '#2563EB' : t.status === 'completed' ? '#64748B' : '#14B8A6',
-        }));
-        return [...DEFAULT_TRIPS, ...mapped];
+  const [allTrips, setAllTrips] = useState<CalendarTrip[]>(DEFAULT_TRIPS);
+
+  useEffect(() => {
+    const loadTrips = async () => {
+      try {
+        const res = await tripApi.getTrips({ limit: 20 });
+        if (res?.trips && res.trips.length > 0) {
+          const mapped: CalendarTrip[] = res.trips.map((t) => ({
+            id: t.id,
+            title: t.name,
+            subtitle: 'Custom Day Exploration',
+            startDate: t.startDate ? t.startDate.split('T')[0] : '2024-01-10',
+            endDate: t.endDate ? t.endDate.split('T')[0] : '2024-01-16',
+            status: (t.status?.toLowerCase() || 'upcoming') as 'ongoing' | 'upcoming' | 'completed',
+            color: t.status === 'ONGOING' ? '#2563EB' : t.status === 'COMPLETED' ? '#64748B' : '#14B8A6',
+          }));
+          setAllTrips([...DEFAULT_TRIPS, ...mapped]);
+        }
+      } catch {
+        // Keep defaults
       }
-    } catch {
-      // Ignore parse errors
-    }
-    return DEFAULT_TRIPS;
-  });
+    };
+    loadTrips();
+  }, []);
 
   // Selected Day Popover
   const [activePopover, setActivePopover] = useState<{
@@ -348,9 +344,14 @@ export const CalendarPage: FC = () => {
             <button
               type="button"
               onClick={handleTodayClick}
-              className="px-5 py-2.5 bg-white hover:bg-slate-50 active:bg-slate-100 border border-slate-200/90 text-slate-800 text-sm font-semibold rounded-2xl shadow-2xs transition-all cursor-pointer"
+              className="px-5 py-2.5 bg-white hover:bg-slate-50 active:bg-slate-100 border border-slate-200/90 text-slate-800 text-sm font-semibold rounded-2xl shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
             >
-              Today
+              <span>Today</span>
+              {allTrips.length > 0 && (
+                <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full font-bold">
+                  {allTrips.length}
+                </span>
+              )}
             </button>
 
             {/* Filter Button */}

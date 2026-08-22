@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import type { FC, FormEvent } from 'react';
 import {
   Search,
@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { Navbar } from '../../components/layout/Navbar';
 import { Footer } from '../../components/layout/Footer';
+import { communityApi } from '../../api/communityApi';
+import { useAuth } from '../../context/AuthContext';
 
 interface PostComment {
   id: string;
@@ -133,10 +135,44 @@ const INITIAL_POSTS: CommunityPostItem[] = [
 ];
 
 export const CommunityPage: FC = () => {
+  const { user } = useAuth();
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [posts, setPosts] = useState<CommunityPostItem[]>(INITIAL_POSTS);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Load community posts from backend
+  const loadPosts = useCallback(async () => {
+    try {
+      const res = await communityApi.getCommunityPosts({ limit: 20 });
+      if (res?.posts && res.posts.length > 0) {
+        const formatted: CommunityPostItem[] = res.posts.map((p) => ({
+          id: p.id,
+          author: p.user ? `${p.user.firstName} ${p.user.lastName}` : 'Traveler',
+          avatar: p.user?.photoUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+          timeAgo: new Date(p.createdAt).toLocaleDateString(),
+          tripBadge: {
+            icon: 'luggage',
+            label: p.trip?.name || 'Adventure',
+          },
+          title: p.title,
+          content: p.content,
+          image: p.imageUrl || p.trip?.coverPhotoUrl || undefined,
+          likes: 12,
+          commentsCount: 2,
+          shares: 1,
+          comments: [],
+        }));
+        setPosts(formatted);
+      }
+    } catch {
+      // Keep defaults
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPosts();
+  }, [loadPosts]);
 
   // Engagement States
   const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({});
@@ -208,8 +244,9 @@ export const CommunityPage: FC = () => {
 
     const newComment: PostComment = {
       id: `comm_${Date.now()}`,
-      author: 'Alex Thompson',
+      author: user ? `${user.firstName} ${user.lastName}` : 'Alex Thompson',
       avatar:
+        user?.photoUrl ||
         'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
       text: newCommentText.trim(),
       time: 'Just now',
@@ -231,14 +268,29 @@ export const CommunityPage: FC = () => {
     setNewCommentText('');
   };
 
-  const handleCreatePostSubmit = (e: FormEvent) => {
+  const handleCreatePostSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!newPostTitle.trim() || !newPostContent.trim()) return;
 
+    let newPostId = `post_${Date.now()}`;
+    try {
+      const res = await communityApi.createCommunityPost({
+        title: newPostTitle.trim(),
+        content: newPostContent.trim(),
+        imageUrl: newPostImageUrl.trim() || undefined,
+      });
+      if (res?.post) {
+        newPostId = res.post.id;
+      }
+    } catch {
+      // Handled locally
+    }
+
     const createdPost: CommunityPostItem = {
-      id: `post_${Date.now()}`,
-      author: 'Alex Thompson',
+      id: newPostId,
+      author: user ? `${user.firstName} ${user.lastName}` : 'Alex Thompson',
       avatar:
+        user?.photoUrl ||
         'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
       timeAgo: 'Just now',
       tripBadge: {

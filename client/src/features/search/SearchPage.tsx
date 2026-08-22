@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { FC } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { Navbar } from '../../components/layout/Navbar';
 import { Footer } from '../../components/layout/Footer';
+import { cityApi } from '../../api/cityApi';
+import { activityApi } from '../../api/activityApi';
 
 interface CityItem {
   id: string;
@@ -141,8 +143,20 @@ const ACTIVITIES_DATA: ActivitySearchItem[] = [
     image: '/images/paris.jpg',
   },
   {
+    id: 'act-eiffel',
+    name: 'Eiffel Tower Sunset Dinner',
+    cityName: 'Paris',
+    country: 'France',
+    region: 'Europe',
+    category: 'Food',
+    price: 180,
+    duration: '2.5 hours',
+    rating: 4.8,
+    image: '/images/paris.jpg',
+  },
+  {
     id: 'act-shibuya',
-    name: 'Shibuya Neon Street Food Walk',
+    name: 'Shibuya Night Market Food Walk',
     cityName: 'Tokyo',
     country: 'Japan',
     region: 'Asia',
@@ -213,6 +227,10 @@ export const SearchPage: FC = () => {
   // Search input state (pre-filled from URL query param if present)
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
 
+  // Live Backend Data
+  const [liveCities, setLiveCities] = useState<CityItem[]>(CITIES_DATA);
+  const [liveActivities, setLiveActivities] = useState<ActivitySearchItem[]>(ACTIVITIES_DATA);
+
   // Filter States
   const [selectedRegion, setSelectedRegion] = useState<'all' | 'Europe' | 'Asia' | 'Americas'>('all');
   const [selectedCost, setSelectedCost] = useState<'all' | '$' | '$$' | '$$$'>('all');
@@ -228,6 +246,74 @@ export const SearchPage: FC = () => {
   const [itemToAdd, setItemToAdd] = useState<{ id: string; name: string; type: 'city' | 'activity' } | null>(null);
   const [addedToast, setAddedToast] = useState<string | null>(null);
 
+  // Fetch live backend results when search query changes
+  useEffect(() => {
+    const fetchLiveResults = async () => {
+      if (!searchQuery.trim()) {
+        try {
+          const popData = await cityApi.getPopularCities(10);
+          if (popData?.cities && popData.cities.length > 0) {
+            const formatted: CityItem[] = popData.cities.map((c, i) => ({
+              id: c.id || `city-pop-${i}`,
+              name: c.name,
+              country: c.country,
+              region: (c.region as 'Europe' | 'Asia' | 'Americas') || 'Europe',
+              image: c.image || c.imageUrl || '/images/paris.jpg',
+              costLevel: (c.costLevel as '$' | '$$' | '$$$') || '$$',
+              rating: 4.8,
+              description: c.description || `Explore the beautiful sights and attractions of ${c.name}.`,
+            }));
+            setLiveCities(formatted);
+          }
+        } catch {
+          // Keep defaults
+        }
+        return;
+      }
+
+      try {
+        if (activeTab === 'cities') {
+          const res = await cityApi.searchCities(searchQuery.trim());
+          if (res?.cities && res.cities.length > 0) {
+            const formatted: CityItem[] = res.cities.map((c, i) => ({
+              id: c.id || `city-live-${i}`,
+              name: c.name,
+              country: c.country,
+              region: (c.region as 'Europe' | 'Asia' | 'Americas') || 'Europe',
+              image: c.image || c.imageUrl || '/images/paris.jpg',
+              costLevel: (c.costLevel as '$' | '$$' | '$$$') || '$$',
+              rating: 4.9,
+              description: c.description || `Discover the culture, landmarks, and highlights of ${c.name}, ${c.country}.`,
+            }));
+            setLiveCities(formatted);
+          }
+        } else {
+          const res = await activityApi.searchActivities({ q: searchQuery.trim() });
+          if (res?.activities && res.activities.length > 0) {
+            const formatted: ActivitySearchItem[] = res.activities.map((a) => ({
+              id: a.id,
+              name: a.name,
+              cityName: (a as unknown as { stop?: { cityName?: string } })?.stop?.cityName || 'Worldwide',
+              country: (a as unknown as { stop?: { country?: string } })?.stop?.country || 'Destination',
+              region: 'Europe' as const,
+              category: (a.category ? (a.category.charAt(0) + a.category.slice(1).toLowerCase()) : 'Culture') as ActivitySearchItem['category'],
+              price: Number(a.cost) || 0,
+              duration: a.durationMin ? `${a.durationMin} mins` : '2 hours',
+              rating: 4.9,
+              image: '/images/paris.jpg',
+            }));
+            setLiveActivities(formatted);
+          }
+        }
+      } catch {
+        // Fallback to local filtering
+      }
+    };
+
+    const timer = setTimeout(fetchLiveResults, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, activeTab]);
+
   // Toggle favorite
   const toggleFavorite = (id: string, name: string) => {
     setFavorites((prev) => {
@@ -242,7 +328,7 @@ export const SearchPage: FC = () => {
 
   // Filtered Cities
   const filteredCities = useMemo(() => {
-    return CITIES_DATA.filter((city) => {
+    return liveCities.filter((city) => {
       const matchesSearch =
         city.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         city.country.toLowerCase().includes(searchQuery.toLowerCase());
@@ -250,11 +336,11 @@ export const SearchPage: FC = () => {
       const matchesCost = selectedCost === 'all' || city.costLevel === selectedCost;
       return matchesSearch && matchesRegion && matchesCost;
     });
-  }, [searchQuery, selectedRegion, selectedCost]);
+  }, [liveCities, searchQuery, selectedRegion, selectedCost]);
 
   // Filtered Activities
   const filteredActivities = useMemo(() => {
-    return ACTIVITIES_DATA.filter((act) => {
+    return liveActivities.filter((act) => {
       const matchesSearch =
         act.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         act.cityName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -262,7 +348,7 @@ export const SearchPage: FC = () => {
       const matchesRegion = selectedRegion === 'all' || act.region === selectedRegion;
       return matchesSearch && matchesRegion;
     });
-  }, [searchQuery, selectedRegion]);
+  }, [liveActivities, searchQuery, selectedRegion]);
 
   const handleAddToTripAction = (_tripId: string, tripName: string) => {
     if (!itemToAdd) return;
