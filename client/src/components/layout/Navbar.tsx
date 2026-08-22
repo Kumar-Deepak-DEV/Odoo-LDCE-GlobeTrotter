@@ -1,7 +1,19 @@
 import { useState } from 'react';
 import type { FC } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Compass, Search, User, LogOut, PlusCircle, Shield, Menu, X, Bell } from 'lucide-react';
+import {
+  Compass,
+  Search,
+  User,
+  LogOut,
+  PlusCircle,
+  Shield,
+  Menu,
+  X,
+  Bell,
+  Heart,
+  Plus,
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export const Navbar: FC = () => {
@@ -18,7 +30,6 @@ export const Navbar: FC = () => {
     { label: 'Explore', href: '/dashboard' },
     { label: 'Trips', href: '/trips' },
     { label: 'Saved', href: '/search' },
-    { label: 'Messages', href: '/community' },
   ];
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -53,7 +64,8 @@ export const Navbar: FC = () => {
           {navLinks.map((link) => {
             const isActive =
               (link.href === '/dashboard' && (location.pathname === '/dashboard' || location.pathname === '/')) ||
-              (link.href === '/trips' && (location.pathname === '/trips' || location.pathname.startsWith('/trips/')));
+              (link.href === '/trips' && (location.pathname === '/trips' || location.pathname.startsWith('/trips/'))) ||
+              (link.href === '/search' && location.pathname === '/search');
 
             return (
               <Link
@@ -75,7 +87,16 @@ export const Navbar: FC = () => {
         </nav>
 
         {/* Right Action Items */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          {/* Add Trip Button */}
+          <Link
+            to="/trips/new"
+            className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-sm rounded-xl shadow-sm transition-all"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span>Add Trip</span>
+          </Link>
+
           {/* Notification Bell */}
           <button
             type="button"
@@ -88,6 +109,15 @@ export const Navbar: FC = () => {
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full ring-2 ring-white" />
             )}
           </button>
+
+          {/* Saved / Favorites Trigger */}
+          <Link
+            to="/search?tab=saved"
+            aria-label="Saved items"
+            className="p-2 text-slate-600 hover:text-red-500 hover:bg-slate-100 rounded-full transition-colors"
+          >
+            <Heart className="w-5 h-5 stroke-[1.8]" />
+          </Link>
 
           {/* User Profile / Auth State */}
           {isAuthenticated && user ? (
@@ -209,6 +239,13 @@ export const Navbar: FC = () => {
               {link.label}
             </Link>
           ))}
+          <Link
+            to="/trips/new"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block px-3 py-2 rounded-lg text-base font-medium text-blue-600 hover:bg-blue-50"
+          >
+            + Add Trip
+          </Link>
         </div>
       )}
 
