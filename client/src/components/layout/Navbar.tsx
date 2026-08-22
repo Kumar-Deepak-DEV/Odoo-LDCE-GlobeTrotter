@@ -3,7 +3,6 @@ import type { FC } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Compass,
-  Search,
   User,
   LogOut,
   PlusCircle,
@@ -13,6 +12,8 @@ import {
   Bell,
   Heart,
   Plus,
+  Calendar,
+  Users,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -22,23 +23,15 @@ export const Navbar: FC = () => {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [showSearchModal, setShowSearchModal] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [hasNotifications, setHasNotifications] = useState(true);
 
   const navLinks = [
     { label: 'Explore', href: '/dashboard' },
     { label: 'Trips', href: '/trips' },
-    { label: 'Saved', href: '/search' },
+    { label: 'Search', href: '/search' },
+    { label: 'Calendar', href: '/calendar' },
+    { label: 'Community', href: '/community' },
   ];
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setShowSearchModal(false);
-    }
-  };
 
   const handleLogout = () => {
     logout();
@@ -60,20 +53,22 @@ export const Navbar: FC = () => {
         </Link>
 
         {/* Center Navigation Links */}
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="hidden lg:flex items-center gap-7">
           {navLinks.map((link) => {
             const isActive =
               (link.href === '/dashboard' && (location.pathname === '/dashboard' || location.pathname === '/')) ||
               (link.href === '/trips' && (location.pathname === '/trips' || location.pathname.startsWith('/trips/'))) ||
-              (link.href === '/search' && location.pathname === '/search');
+              (link.href === '/search' && location.pathname === '/search') ||
+              (link.href === '/calendar' && location.pathname === '/calendar') ||
+              (link.href === '/community' && location.pathname === '/community');
 
             return (
               <Link
                 key={link.label}
                 to={link.href}
-                className={`relative py-2 text-sm font-medium transition-colors ${
+                className={`relative py-2 text-sm font-semibold transition-colors ${
                   isActive
-                    ? 'text-blue-600 font-semibold'
+                    ? 'text-blue-600'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -84,6 +79,23 @@ export const Navbar: FC = () => {
               </Link>
             );
           })}
+
+          {/* Conditional Admin Nav Link if Admin */}
+          {isAuthenticated && isAdmin && (
+            <Link
+              to="/admin"
+              className={`relative py-2 text-sm font-semibold transition-colors ${
+                location.pathname === '/admin'
+                  ? 'text-indigo-600'
+                  : 'text-slate-600 hover:text-indigo-600'
+              }`}
+            >
+              Admin
+              {location.pathname === '/admin' && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-full animate-fadeIn" />
+              )}
+            </Link>
+          )}
         </nav>
 
         {/* Right Action Items */}
@@ -135,7 +147,7 @@ export const Navbar: FC = () => {
                   />
                 ) : (
                   <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
-                    {user.firstName[0]}
+                    {user.firstName ? user.firstName[0] : 'U'}
                   </div>
                 )}
               </button>
@@ -161,7 +173,34 @@ export const Navbar: FC = () => {
                       className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
                     >
                       <User className="w-4 h-4 text-slate-400" />
-                      My Profile
+                      My Profile & Settings
+                    </Link>
+
+                    <Link
+                      to="/trips"
+                      onClick={() => setShowProfileMenu(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                      <Compass className="w-4 h-4 text-blue-600" />
+                      My Trips
+                    </Link>
+
+                    <Link
+                      to="/calendar"
+                      onClick={() => setShowProfileMenu(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                      <Calendar className="w-4 h-4 text-teal-600" />
+                      Trip Calendar
+                    </Link>
+
+                    <Link
+                      to="/community"
+                      onClick={() => setShowProfileMenu(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                      <Users className="w-4 h-4 text-amber-600" />
+                      Community Hub
                     </Link>
 
                     <Link
@@ -177,7 +216,7 @@ export const Navbar: FC = () => {
                       <Link
                         to="/admin"
                         onClick={() => setShowProfileMenu(false)}
-                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 transition-colors"
+                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 transition-colors font-medium"
                       >
                         <Shield className="w-4 h-4 text-indigo-600" />
                         Admin Dashboard
@@ -202,13 +241,13 @@ export const Navbar: FC = () => {
             <div className="flex items-center gap-2">
               <Link
                 to="/login"
-                className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-blue-600 transition-colors"
+                className="px-4 py-2 text-sm font-semibold text-slate-700 hover:text-blue-600 transition-colors"
               >
                 Sign In
               </Link>
               <Link
                 to="/signup"
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-all"
+                className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-all"
               >
                 Sign Up
               </Link>
@@ -219,7 +258,8 @@ export const Navbar: FC = () => {
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg"
+            aria-label="Toggle Navigation Menu"
+            className="lg:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg cursor-pointer"
           >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
@@ -228,7 +268,7 @@ export const Navbar: FC = () => {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-slate-100 bg-white px-4 py-4 space-y-2">
+        <div className="lg:hidden border-t border-slate-100 bg-white px-4 py-4 space-y-2 animate-fadeIn">
           {navLinks.map((link) => (
             <Link
               key={link.label}
@@ -239,51 +279,25 @@ export const Navbar: FC = () => {
               {link.label}
             </Link>
           ))}
-          <Link
-            to="/trips/new"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-lg text-base font-medium text-blue-600 hover:bg-blue-50"
-          >
-            + Add Trip
-          </Link>
-        </div>
-      )}
 
-      {/* Quick Search Modal */}
-      {showSearchModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4 bg-black/40 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl border border-slate-100">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold font-heading text-slate-900">
-                Search GlobeTrotter
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowSearchModal(false)}
-                className="p-1 text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handleSearchSubmit} className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  autoFocus
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search destinations (e.g. Paris, Tokyo, Bali)..."
-                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-              <button
-                type="submit"
-                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-xl"
-              >
-                Search
-              </button>
-            </form>
+          {isAuthenticated && isAdmin && (
+            <Link
+              to="/admin"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-lg text-base font-medium text-indigo-600 hover:bg-indigo-50"
+            >
+              Admin Dashboard
+            </Link>
+          )}
+
+          <div className="pt-2 border-t border-slate-100">
+            <Link
+              to="/trips/new"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-lg text-base font-medium text-blue-600 hover:bg-blue-50"
+            >
+              + Add Trip
+            </Link>
           </div>
         </div>
       )}

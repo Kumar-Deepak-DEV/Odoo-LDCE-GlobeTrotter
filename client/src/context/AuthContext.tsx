@@ -7,6 +7,7 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isLoading: boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
 }
@@ -16,8 +17,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    // Check initial auth state from localStorage
     const savedToken = localStorage.getItem('globetrotter_token');
     const savedUser = localStorage.getItem('globetrotter_user');
 
@@ -30,6 +33,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         localStorage.removeItem('globetrotter_user');
       }
     }
+    setIsLoading(false);
   }, []);
 
   const login = (newToken: string, newUser: User) => {
@@ -55,6 +59,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         token,
         isAuthenticated: !!user,
         isAdmin,
+        isLoading,
         login,
         logout,
       }}
@@ -71,3 +76,5 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+
+export default AuthContext;

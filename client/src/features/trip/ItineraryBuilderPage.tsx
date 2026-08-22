@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { FC, FormEvent } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import {
   Share2,
   Map as MapIcon,
@@ -19,6 +19,7 @@ import {
   Clock,
   Copy,
   Trash2,
+  Eye,
 } from 'lucide-react';
 import { Navbar } from '../../components/layout/Navbar';
 import { Footer } from '../../components/layout/Footer';
@@ -281,7 +282,16 @@ export const ItineraryBuilderPage: FC = () => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* View Itinerary Button */}
+            <Link
+              to={`/trips/${id || '1'}`}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-xl shadow-sm hover:shadow transition-all flex items-center gap-2"
+            >
+              <Eye className="w-4 h-4" />
+              <span>View Itinerary</span>
+            </Link>
+
             {/* Share Button */}
             <button
               type="button"
@@ -296,7 +306,7 @@ export const ItineraryBuilderPage: FC = () => {
             <button
               type="button"
               onClick={() => setShowMapModal(true)}
-              className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm rounded-xl shadow-sm hover:shadow transition-all flex items-center gap-2 cursor-pointer"
+              className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm rounded-xl shadow-sm hover:shadow transition-all flex items-center gap-2 cursor-pointer"
             >
               <MapIcon className="w-4 h-4" />
               <span>View Map</span>
