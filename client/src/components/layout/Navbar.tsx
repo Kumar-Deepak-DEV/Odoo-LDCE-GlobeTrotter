@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { FC } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Compass, Search, User, LogOut, PlusCircle, Shield, Menu, X } from 'lucide-react';
+import { Compass, Search, User, LogOut, PlusCircle, Shield, Menu, X, Bell } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export const Navbar: FC = () => {
@@ -12,12 +12,13 @@ export const Navbar: FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [hasNotifications, setHasNotifications] = useState(true);
 
   const navLinks = [
     { label: 'Explore', href: '/dashboard' },
-    { label: 'Bookings', href: '/trips' },
-    { label: 'Destinations', href: '/search' },
-    { label: 'Deals', href: '/community' },
+    { label: 'Trips', href: '/trips' },
+    { label: 'Saved', href: '/search' },
+    { label: 'Messages', href: '/community' },
   ];
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -51,8 +52,8 @@ export const Navbar: FC = () => {
         <nav className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => {
             const isActive =
-              location.pathname === link.href ||
-              (link.href === '/dashboard' && location.pathname === '/');
+              (link.href === '/dashboard' && (location.pathname === '/dashboard' || location.pathname === '/')) ||
+              (link.href === '/trips' && (location.pathname === '/trips' || location.pathname.startsWith('/trips/')));
 
             return (
               <Link
@@ -75,14 +76,17 @@ export const Navbar: FC = () => {
 
         {/* Right Action Items */}
         <div className="flex items-center gap-3">
-          {/* Search Trigger */}
+          {/* Notification Bell */}
           <button
             type="button"
-            onClick={() => setShowSearchModal(true)}
-            aria-label="Search destinations"
-            className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
+            onClick={() => setHasNotifications(false)}
+            aria-label="Notifications"
+            className="relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
           >
-            <Search className="w-5 h-5 stroke-[2]" />
+            <Bell className="w-5 h-5 stroke-[1.8]" />
+            {hasNotifications && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full ring-2 ring-white" />
+            )}
           </button>
 
           {/* User Profile / Auth State */}
