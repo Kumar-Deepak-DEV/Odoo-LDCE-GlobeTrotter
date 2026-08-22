@@ -53,7 +53,7 @@ export const SharedTripPage: FC = () => {
       'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
     dates: loadedTrip?.startDate && loadedTrip?.endDate
       ? `${new Date(loadedTrip.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(loadedTrip.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
-      : 'Oct 12 - Oct 25, 2024',
+      : `${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(Date.now() + 14 * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
     isPublic: true,
     coverImage: loadedTrip?.coverPhotoUrl || '/images/adventure-mountain.jpg',
     description:
@@ -61,64 +61,64 @@ export const SharedTripPage: FC = () => {
       "A curated journey through Europe's most iconic cities, focusing on hidden gems and culinary delights.",
     stops: loadedTrip?.stops && loadedTrip.stops.length > 0
       ? loadedTrip.stops.map((s) => ({
-          id: s.id,
-          cityName: s.country ? `${s.cityName}, ${s.country}` : s.cityName,
+        id: s.id,
+        cityName: s.country ? `${s.cityName}, ${s.country}` : s.cityName,
+        days: [
+          {
+            dayNumber: 1,
+            activities: (s.activities || []).map((act) => ({
+              id: act.id,
+              name: act.name,
+              durationMin: act.durationMin || 60,
+              cost: Number(act.cost) > 0 ? `$${act.cost}` : 'Free',
+              category: act.category || 'Sightseeing',
+              icon: act.category?.toLowerCase() === 'food' ? 'utensils' : 'landmark',
+            })),
+          },
+        ],
+      }))
+      : [
+        {
+          id: 'stop-1',
+          cityName: 'Paris, France',
           days: [
             {
               dayNumber: 1,
-              activities: (s.activities || []).map((act) => ({
-                id: act.id,
-                name: act.name,
-                durationMin: act.durationMin || 60,
-                cost: Number(act.cost) > 0 ? `$${act.cost}` : 'Free',
-                category: act.category || 'Sightseeing',
-                icon: act.category?.toLowerCase() === 'food' ? 'utensils' : 'landmark',
-              })),
+              activities: [
+                {
+                  id: 'act-1',
+                  name: 'Louvre Museum',
+                  durationMin: 120,
+                  cost: '$45',
+                  category: 'Culture',
+                  icon: 'landmark',
+                },
+                {
+                  id: 'act-2',
+                  name: 'Dinner at Le Marais',
+                  durationMin: 90,
+                  cost: '$80',
+                  category: 'Food',
+                  icon: 'utensils',
+                },
+              ],
+            },
+            {
+              dayNumber: 2,
+              activities: [
+                {
+                  id: 'act-3',
+                  name: 'Montmartre Walking Tour',
+                  durationMin: 180,
+                  cost: 'Free',
+                  category: 'Sightseeing',
+                  icon: 'footprints',
+                },
+              ],
             },
           ],
-        }))
-      : [
-          {
-            id: 'stop-1',
-            cityName: 'Paris, France',
-            days: [
-              {
-                dayNumber: 1,
-                activities: [
-                  {
-                    id: 'act-1',
-                    name: 'Louvre Museum',
-                    durationMin: 120,
-                    cost: '$45',
-                    category: 'Culture',
-                    icon: 'landmark',
-                  },
-                  {
-                    id: 'act-2',
-                    name: 'Dinner at Le Marais',
-                    durationMin: 90,
-                    cost: '$80',
-                    category: 'Food',
-                    icon: 'utensils',
-                  },
-                ],
-              },
-              {
-                dayNumber: 2,
-                activities: [
-                  {
-                    id: 'act-3',
-                    name: 'Montmartre Walking Tour',
-                    durationMin: 180,
-                    cost: 'Free',
-                    category: 'Sightseeing',
-                    icon: 'footprints',
-                  },
-                ],
-              },
-            ],
-          },
-        ],
+        },
+      ],
   };
 
   const handleCopyTrip = async () => {
