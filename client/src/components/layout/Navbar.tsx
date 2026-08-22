@@ -141,7 +141,7 @@ export const Navbar: FC = () => {
               (link.href === '/trips' && (location.pathname === '/trips' || location.pathname.startsWith('/trips/'))) ||
               (link.href === '/search' && location.pathname === '/search') ||
               (link.href === '/calendar' && location.pathname === '/calendar') ||
-              (link.href === '/community' && location.pathname === '/community');
+              (link.href === '/community' && (location.pathname === '/community' || location.pathname.startsWith('/community/')));
 
             return (
               <Link

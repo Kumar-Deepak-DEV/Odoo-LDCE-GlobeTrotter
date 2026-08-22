@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Navbar } from '../../components/layout/Navbar';
 import { Footer } from '../../components/layout/Footer';
+import { CommunityNav } from './components/CommunityNav';
 import { communityApi } from '../../api/communityApi';
 import { useAuth } from '../../context/AuthContext';
 
@@ -326,6 +327,7 @@ export const CommunityPage: FC = () => {
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-body flex flex-col selection:bg-blue-500 selection:text-white">
       {/* Global Header */}
       <Navbar />
+      <CommunityNav onOpenCreateModal={() => setShowShareTripModal(true)} />
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-6">
         {/* TOP CONTROLS BAR: SEARCH & SHARE YOUR TRIP BUTTON */}

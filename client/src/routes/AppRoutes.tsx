@@ -18,6 +18,10 @@ import { SharedItineraryPage } from '../features/trip/SharedItineraryPage';
 import { SearchPage } from '../features/search/SearchPage';
 import { CalendarPage } from '../features/calendar/CalendarPage';
 import { CommunityPage } from '../features/community/CommunityPage';
+import { CommunityGuidesPage } from '../features/community/CommunityGuidesPage';
+import { CommunityLeaderboardPage } from '../features/community/CommunityLeaderboardPage';
+import { TravelBuddiesPage } from '../features/community/TravelBuddiesPage';
+import { CommunityStoriesPage } from '../features/community/CommunityStoriesPage';
 import { ProfilePage } from '../features/profile/ProfilePage';
 import { AdminDashboardPage } from '../features/admin/AdminDashboardPage';
 
@@ -127,6 +131,38 @@ export const AppRoutes: FC = () => {
         element={
           <ProtectedRoute>
             <CommunityPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/community/guides"
+        element={
+          <ProtectedRoute>
+            <CommunityGuidesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/community/leaderboard"
+        element={
+          <ProtectedRoute>
+            <CommunityLeaderboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/community/travel-buddies"
+        element={
+          <ProtectedRoute>
+            <TravelBuddiesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/community/stories"
+        element={
+          <ProtectedRoute>
+            <CommunityStoriesPage />
           </ProtectedRoute>
         }
       />
