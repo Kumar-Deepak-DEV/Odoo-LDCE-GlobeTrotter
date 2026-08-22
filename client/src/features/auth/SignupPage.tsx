@@ -3,7 +3,7 @@ import type { FC, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Compass, AlertCircle, CheckCircle2, User, Mail, Lock, MapPin, Globe } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { axiosInstance } from '../../api/axiosInstance';
+import { authApi } from '../../api/authApi';
 
 export const SignupPage: FC = () => {
   const navigate = useNavigate();
@@ -44,31 +44,17 @@ export const SignupPage: FC = () => {
     setIsLoading(true);
 
     try {
-      const res = await axiosInstance.post('/auth/register', formData);
-      if (res.data?.data?.token && res.data?.data?.user) {
-        login(res.data.data.token, res.data.data.user);
+      const data = await authApi.register(formData);
+      if (data?.token && data?.user) {
+        login(data.token, data.user);
         setSuccessMessage('Account created successfully! Redirecting...');
-        setTimeout(() => navigate('/dashboard'), 800);
+        setTimeout(() => navigate('/dashboard'), 600);
         return;
       }
-    } catch {
-      // Mock account creation for offline/demo reliability
-      const mockUser = {
-        id: `usr_${Date.now()}`,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        city: formData.city || 'San Francisco',
-        country: formData.country || 'USA',
-        bio: formData.bio,
-        role: 'USER' as const,
-        createdAt: new Date().toISOString(),
-        photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-      };
-      const mockToken = `jwt_mock_${Date.now()}`;
-      login(mockToken, mockUser);
-      setSuccessMessage('Account created successfully! Welcome to GlobeTrotter.');
-      setTimeout(() => navigate('/dashboard'), 800);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { error?: { message?: string } } } };
+      const serverMsg = axiosErr.response?.data?.error?.message;
+      setErrorMessage(serverMsg || 'Failed to create account. Please check your details and try again.');
     } finally {
       setIsLoading(false);
     }

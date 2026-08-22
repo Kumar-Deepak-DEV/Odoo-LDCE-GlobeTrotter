@@ -3,7 +3,7 @@ import type { FC, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Compass, AlertCircle, CheckCircle2, ArrowRight, ShieldCheck, UserCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { axiosInstance } from '../../api/axiosInstance';
+import { authApi } from '../../api/authApi';
 
 interface DestinationSlide {
   image: string;
@@ -71,39 +71,15 @@ export const LoginPage: FC = () => {
     setIsLoading(true);
 
     try {
-      // Attempt backend login first
-      const res = await axiosInstance.post('/auth/login', { email, password });
-      if (res.data?.data?.token && res.data?.data?.user) {
-        login(res.data.data.token, res.data.data.user);
+      // Attempt backend login
+      const data = await authApi.login({ email: email.trim(), password });
+      if (data?.token && data?.user) {
+        login(data.token, data.user);
         setSuccessMessage('Login successful! Redirecting...');
-        setTimeout(() => navigate('/dashboard'), 600);
+        setTimeout(() => navigate('/dashboard'), 500);
         return;
       }
     } catch (err: unknown) {
-      // Fallback for hackathon demo / offline testing
-      const isKnownDemoUser = email.toLowerCase().includes('admin') || email.toLowerCase().includes('user') || email.toLowerCase().includes('demo');
-      
-      if (isKnownDemoUser || password.length >= 4) {
-        // Provide mock user session for offline evaluation
-        const isAdmin = email.toLowerCase().includes('admin');
-        const mockUser = {
-          id: isAdmin ? 'usr_admin_01' : 'usr_demo_01',
-          firstName: isAdmin ? 'Alex' : 'Sarah',
-          lastName: isAdmin ? 'Morgan' : 'Jenkins',
-          email: email.trim(),
-          role: (isAdmin ? 'ADMIN' : 'USER') as 'ADMIN' | 'USER',
-          createdAt: new Date().toISOString(),
-          photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-          city: 'San Francisco',
-          country: 'USA',
-        };
-        const mockToken = `jwt_mock_${Date.now()}`;
-        login(mockToken, mockUser);
-        setSuccessMessage('Logged in successfully! Redirecting...');
-        setTimeout(() => navigate('/dashboard'), 600);
-        return;
-      }
-
       const axiosErr = err as { response?: { data?: { error?: { message?: string } } } };
       const serverMsg = axiosErr.response?.data?.error?.message;
       setErrorMessage(serverMsg || 'Invalid email or password. Please try again.');
@@ -114,18 +90,23 @@ export const LoginPage: FC = () => {
 
   const handleQuickDemoFill = (type: 'user' | 'admin') => {
     if (type === 'user') {
-      setEmail('alex.traveler@globetrotter.com');
-      setPassword('Traveler2026!');
+      setEmail('demo@globetrotter.com');
+      setPassword('Demo@2024');
     } else {
       setEmail('admin@globetrotter.com');
-      setPassword('AdminSecure2026!');
+      setPassword('Admin@2024');
     }
     setErrorMessage(null);
   };
 
-  const handleForgotSubmit = (e: FormEvent) => {
+  const handleForgotSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!forgotEmail.trim()) return;
+    try {
+      await authApi.forgotPassword(forgotEmail.trim());
+    } catch {
+      // Ignore network errors for forgot password in demo mode
+    }
     setForgotSent(true);
     setTimeout(() => {
       setShowForgotModal(false);

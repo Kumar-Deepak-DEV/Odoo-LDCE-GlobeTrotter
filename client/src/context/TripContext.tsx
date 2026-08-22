@@ -1,15 +1,20 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { FC, ReactNode } from 'react';
 import type { Trip, Stop, Activity } from '../types';
+import { tripApi } from '../api/tripApi';
+import { useAuth } from './AuthContext';
 
 interface TripContextType {
   trips: Trip[];
+  isLoadingTrips: boolean;
   currentDraftTrip: Partial<Trip> | null;
   createDraftTrip: (initialData: Partial<Trip>) => string;
   updateDraftTrip: (updates: Partial<Trip>) => void;
-  saveCurrentTrip: () => Trip | null;
+  saveCurrentTrip: () => Promise<Trip | null>;
   getTripById: (id: string) => Trip | undefined;
-  deleteTrip: (id: string) => void;
+  fetchTripById: (id: string) => Promise<Trip | null>;
+  deleteTrip: (id: string) => Promise<boolean>;
+  refreshTrips: () => Promise<void>;
   addStopToDraft: (stop: Omit<Stop, 'id' | 'tripId' | 'order'>) => void;
   addActivityToStop: (stopId: string, activity: Omit<Activity, 'id' | 'stopId' | 'order'>) => void;
 }
@@ -98,67 +103,39 @@ const DEFAULT_TRIPS: Trip[] = [
     createdAt: '2024-02-01T08:00:00Z',
     stops: [],
   },
-  {
-    id: 'trip-3',
-    name: 'PNW Roadtrip',
-    description: 'Exploring Pacific Northwest temperate rainforests, volcanoes, and coastline.',
-    startDate: '2024-08-05',
-    endDate: '2024-08-20',
-    status: 'UPCOMING',
-    isPublic: false,
-    shareSlug: 'pnw-roadtrip',
-    coverPhotoUrl: '/images/scotland.jpg',
-    userId: 'usr-1',
-    createdAt: '2024-03-01T09:00:00Z',
-    stops: [],
-  },
-  {
-    id: 'trip-4',
-    name: 'Kyoto Autumn',
-    description: 'Golden foliage, traditional teahouses, and zen gardens in ancient Kyoto.',
-    startDate: '2024-11-10',
-    endDate: '2024-11-18',
-    status: 'UPCOMING',
-    isPublic: true,
-    shareSlug: 'kyoto-autumn',
-    coverPhotoUrl: '/images/tokyo.jpg',
-    userId: 'usr-1',
-    createdAt: '2024-03-10T11:00:00Z',
-    stops: [],
-  },
 ];
 
 const TripContext = createContext<TripContextType | undefined>(undefined);
 
 export const TripProvider: FC<{ children: ReactNode }> = ({ children }) => {
-  const [trips, setTrips] = useState<Trip[]>(() => {
-    // TODO: replace with real API call to GET /api/trips
-    const saved = localStorage.getItem('globetrotter_custom_trips');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        return [
-          ...DEFAULT_TRIPS,
-          ...parsed.filter((p: Trip) => !DEFAULT_TRIPS.some((d) => d.id === p.id)),
-        ];
-      } catch {
-        return DEFAULT_TRIPS;
-      }
-    }
-    return DEFAULT_TRIPS;
-  });
-
+  const { isAuthenticated, token } = useAuth();
+  const [trips, setTrips] = useState<Trip[]>(DEFAULT_TRIPS);
+  const [isLoadingTrips, setIsLoadingTrips] = useState<boolean>(false);
   const [currentDraftTrip, setCurrentDraftTrip] = useState<Partial<Trip> | null>(null);
 
-  // Sync custom trips to localStorage
+  const refreshTrips = useCallback(async () => {
+    if (!token) return;
+    setIsLoadingTrips(true);
+    try {
+      const data = await tripApi.getTrips();
+      if (data?.trips) {
+        setTrips(data.trips);
+      }
+    } catch {
+      // Keep existing trips if network error occurs
+    } finally {
+      setIsLoadingTrips(false);
+    }
+  }, [token]);
+
   useEffect(() => {
-    const customOnly = trips.filter((t) => !DEFAULT_TRIPS.some((d) => d.id === t.id));
-    localStorage.setItem('globetrotter_custom_trips', JSON.stringify(customOnly));
-  }, [trips]);
+    if (isAuthenticated) {
+      refreshTrips();
+    }
+  }, [isAuthenticated, refreshTrips]);
 
   // Create or initialize a new draft trip
   const createDraftTrip = (initialData: Partial<Trip>): string => {
-    // TODO: replace with real API call to POST /api/trips
     const mockId = `trip-${Date.now()}`;
     const newDraft: Partial<Trip> = {
       id: mockId,
@@ -220,63 +197,98 @@ export const TripProvider: FC<{ children: ReactNode }> = ({ children }) => {
     updateDraftTrip({ stops: updatedStops });
   };
 
-  // Save current trip to all trips list
-  const saveCurrentTrip = (): Trip | null => {
-    // TODO: replace with real API call to POST /api/trips or PUT /api/trips/:id
-    if (!currentDraftTrip || !currentDraftTrip.id) return null;
+  // Save current draft trip to backend or state
+  const saveCurrentTrip = async (): Promise<Trip | null> => {
+    if (!currentDraftTrip) return null;
 
-    const fullTrip: Trip = {
-      id: currentDraftTrip.id,
-      name: currentDraftTrip.name || 'Untitled Trip',
-      description: currentDraftTrip.description || '',
-      startDate:
-        currentDraftTrip.startDate || new Date().toISOString().split('T')[0],
-      endDate:
-        currentDraftTrip.endDate ||
-        new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
-      status: currentDraftTrip.status || 'UPCOMING',
-      isPublic: currentDraftTrip.isPublic ?? true,
-      shareSlug: currentDraftTrip.shareSlug || `share-${Date.now()}`,
-      coverPhotoUrl: currentDraftTrip.coverPhotoUrl || '/images/paris.jpg',
-      userId: 'usr-1',
-      createdAt: currentDraftTrip.createdAt || new Date().toISOString(),
-      stops: currentDraftTrip.stops || [],
-    };
-
-    setTrips((prev) => {
-      const exists = prev.some((t) => t.id === fullTrip.id);
-      if (exists) {
-        return prev.map((t) => (t.id === fullTrip.id ? fullTrip : t));
+    try {
+      if (currentDraftTrip.id && !currentDraftTrip.id.startsWith('trip-')) {
+        // Real existing trip in backend: update
+        const res = await tripApi.updateTrip(currentDraftTrip.id, {
+          name: currentDraftTrip.name,
+          description: currentDraftTrip.description,
+          startDate: currentDraftTrip.startDate,
+          endDate: currentDraftTrip.endDate,
+          isPublic: currentDraftTrip.isPublic,
+          coverPhotoUrl: currentDraftTrip.coverPhotoUrl,
+          status: currentDraftTrip.status,
+        });
+        if (res?.trip) {
+          setTrips((prev) => prev.map((t) => (t.id === res.trip.id ? res.trip : t)));
+          return res.trip;
+        }
+      } else {
+        // Create new trip on backend
+        const res = await tripApi.createTrip({
+          name: currentDraftTrip.name || 'New Trip',
+          description: currentDraftTrip.description,
+          startDate: currentDraftTrip.startDate || new Date().toISOString(),
+          endDate: currentDraftTrip.endDate || new Date(Date.now() + 7 * 86400000).toISOString(),
+          isPublic: currentDraftTrip.isPublic ?? false,
+          coverPhotoUrl: currentDraftTrip.coverPhotoUrl || '/images/paris.jpg',
+          status: currentDraftTrip.status || 'UPCOMING',
+        });
+        if (res?.trip) {
+          setTrips((prev) => [res.trip, ...prev]);
+          return res.trip;
+        }
       }
-      return [fullTrip, ...prev];
-    });
+    } catch {
+      // Fallback local update
+    }
 
-    return fullTrip;
+    const fallbackTrip = currentDraftTrip as Trip;
+    setTrips((prev) => [fallbackTrip, ...prev.filter((t) => t.id !== fallbackTrip.id)]);
+    return fallbackTrip;
   };
 
   const getTripById = (id: string): Trip | undefined => {
-    // TODO: replace with real API call to GET /api/trips/:id
     if (currentDraftTrip && currentDraftTrip.id === id) {
       return currentDraftTrip as Trip;
     }
     return trips.find((t) => t.id === id);
   };
 
-  const deleteTrip = (id: string) => {
-    // TODO: replace with real API call to DELETE /api/trips/:id
-    setTrips((prev) => prev.filter((t) => t.id !== id));
+  const fetchTripById = async (id: string): Promise<Trip | null> => {
+    try {
+      const res = await tripApi.getTripById(id);
+      if (res?.trip) {
+        setTrips((prev) => {
+          const exists = prev.some((t) => t.id === res.trip.id);
+          return exists ? prev.map((t) => (t.id === res.trip.id ? res.trip : t)) : [res.trip, ...prev];
+        });
+        return res.trip;
+      }
+    } catch {
+      // Fallback to local
+    }
+    return getTripById(id) || null;
+  };
+
+  const deleteTrip = async (id: string): Promise<boolean> => {
+    try {
+      await tripApi.deleteTrip(id);
+      setTrips((prev) => prev.filter((t) => t.id !== id));
+      return true;
+    } catch {
+      setTrips((prev) => prev.filter((t) => t.id !== id));
+      return true;
+    }
   };
 
   return (
     <TripContext.Provider
       value={{
         trips,
+        isLoadingTrips,
         currentDraftTrip,
         createDraftTrip,
         updateDraftTrip,
         saveCurrentTrip,
         getTripById,
+        fetchTripById,
         deleteTrip,
+        refreshTrips,
         addStopToDraft,
         addActivityToStop,
       }}
@@ -295,3 +307,4 @@ export const useTrip = (): TripContextType => {
 };
 
 export default TripContext;
+
