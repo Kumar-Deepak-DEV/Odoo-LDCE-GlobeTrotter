@@ -90,8 +90,12 @@ export const CreateTripPage: FC = () => {
     prefillDest ? `Trip to ${prefillDest}` : ''
   );
   const [description, setDescription] = useState('');
-  const [startDate, setStartDate] = useState('2024-10-12');
-  const [endDate, setEndDate] = useState('2024-10-20');
+  // Dynamic default: today and +7 days
+  const todayStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+  const weekLaterStr = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+
+  const [startDate, setStartDate] = useState(todayStr);
+  const [endDate, setEndDate] = useState(weekLaterStr);
   const [isPublic, setIsPublic] = useState(false);
   const [coverPhoto, setCoverPhoto] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -104,7 +108,7 @@ export const CreateTripPage: FC = () => {
   const [showDatePicker, setShowDatePicker] = useState<'start' | 'end' | null>(
     'start'
   );
-  const [calendarMonth, setCalendarMonth] = useState(new Date(2024, 9, 1)); // October 2024
+  const [calendarMonth, setCalendarMonth] = useState(() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1); }); // Current month
 
   // Date Validation
   const isDateInvalid = Boolean(
@@ -318,11 +322,10 @@ export const CreateTripPage: FC = () => {
                         showDatePicker === 'start' ? null : 'start'
                       )
                     }
-                    className={`w-full px-4 py-3 bg-white border rounded-xl text-sm flex items-center gap-3 transition-all cursor-pointer text-left ${
-                      showDatePicker === 'start'
+                    className={`w-full px-4 py-3 bg-white border rounded-xl text-sm flex items-center gap-3 transition-all cursor-pointer text-left ${showDatePicker === 'start'
                         ? 'border-blue-600 ring-4 ring-blue-100 text-slate-900 font-medium'
                         : 'border-slate-300 text-slate-800 hover:border-slate-400'
-                    }`}
+                      }`}
                   >
                     <CalendarIcon className="w-4 h-4 text-slate-400 shrink-0" />
                     <span>{formatDisplayDate(startDate) || 'Select date'}</span>
@@ -339,13 +342,12 @@ export const CreateTripPage: FC = () => {
                     onClick={() =>
                       setShowDatePicker(showDatePicker === 'end' ? null : 'end')
                     }
-                    className={`w-full px-4 py-3 bg-white border rounded-xl text-sm flex items-center gap-3 transition-all cursor-pointer text-left ${
-                      isDateInvalid
+                    className={`w-full px-4 py-3 bg-white border rounded-xl text-sm flex items-center gap-3 transition-all cursor-pointer text-left ${isDateInvalid
                         ? 'border-red-400 ring-4 ring-red-100 text-red-900'
                         : showDatePicker === 'end'
-                        ? 'border-blue-600 ring-4 ring-blue-100 text-slate-900 font-medium'
-                        : 'border-slate-300 text-slate-800 hover:border-slate-400'
-                    }`}
+                          ? 'border-blue-600 ring-4 ring-blue-100 text-slate-900 font-medium'
+                          : 'border-slate-300 text-slate-800 hover:border-slate-400'
+                      }`}
                   >
                     <CalendarIcon className="w-4 h-4 text-slate-400 shrink-0" />
                     <span>{formatDisplayDate(endDate) || 'Select date'}</span>
@@ -417,15 +419,14 @@ export const CreateTripPage: FC = () => {
                           key={day}
                           type="button"
                           onClick={() => handleSelectDay(day)}
-                          className={`h-8 w-8 mx-auto rounded-full flex items-center justify-center font-medium transition-all cursor-pointer ${
-                            isStart
+                          className={`h-8 w-8 mx-auto rounded-full flex items-center justify-center font-medium transition-all cursor-pointer ${isStart
                               ? 'border-2 border-teal-500 bg-white text-teal-700 font-bold'
                               : isEnd
-                              ? 'bg-blue-600 text-white font-bold'
-                              : inRange
-                              ? 'bg-blue-50 text-blue-800'
-                              : 'text-slate-700 hover:bg-slate-100'
-                          }`}
+                                ? 'bg-blue-600 text-white font-bold'
+                                : inRange
+                                  ? 'bg-blue-50 text-blue-800'
+                                  : 'text-slate-700 hover:bg-slate-100'
+                            }`}
                         >
                           {day}
                         </button>
@@ -527,14 +528,12 @@ export const CreateTripPage: FC = () => {
                 aria-labelledby="make-trip-public-label"
                 aria-describedby="make-trip-public-help"
                 onClick={() => setIsPublic(!isPublic)}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 ${
-                  isPublic ? 'bg-blue-600' : 'bg-slate-200'
-                }`}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 ${isPublic ? 'bg-blue-600' : 'bg-slate-200'
+                  }`}
               >
                 <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                    isPublic ? 'translate-x-5' : 'translate-x-0'
-                  }`}
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${isPublic ? 'translate-x-5' : 'translate-x-0'
+                    }`}
                 />
               </button>
             </div>
@@ -614,11 +613,10 @@ export const CreateTripPage: FC = () => {
                       type="button"
                       onClick={() => handleApplyDestination(dest)}
                       aria-label={`Select ${dest.name}`}
-                      className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all cursor-pointer ${
-                        isAdded
+                      className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all cursor-pointer ${isAdded
                           ? 'bg-emerald-600 border-emerald-600 text-white'
                           : 'border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white hover:border-blue-600'
-                      }`}
+                        }`}
                     >
                       {isAdded ? (
                         <Check className="w-4 h-4 stroke-[2.5]" />
