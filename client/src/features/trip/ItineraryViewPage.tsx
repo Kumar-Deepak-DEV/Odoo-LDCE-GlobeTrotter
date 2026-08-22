@@ -101,7 +101,11 @@ export const ItineraryViewPage: FC = () => {
 
   // Trip Information
   const [tripTitle, setTripTitle] = useState('European Highlights');
-  const [tripDates, setTripDates] = useState('Oct 12 - Oct 25, 2024');
+  const [tripDates, setTripDates] = useState(() => {
+    const s = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const e = new Date(Date.now() + 14 * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return `${s} - ${e}`;
+  });
   const [tripDurationDays, setTripDurationDays] = useState(14);
 
   // Budget State
@@ -274,8 +278,8 @@ export const ItineraryViewPage: FC = () => {
               type="button"
               onClick={() => setViewMode('list')}
               className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${viewMode === 'list'
-                  ? 'bg-blue-50 text-blue-600 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-blue-50 text-blue-600 shadow-2xs'
+                : 'text-slate-600 hover:text-slate-900'
                 }`}
             >
               <ListIcon className="w-4 h-4" />
@@ -285,8 +289,8 @@ export const ItineraryViewPage: FC = () => {
               type="button"
               onClick={() => setViewMode('calendar')}
               className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${viewMode === 'calendar'
-                  ? 'bg-blue-50 text-blue-600 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-blue-50 text-blue-600 shadow-2xs'
+                : 'text-slate-600 hover:text-slate-900'
                 }`}
             >
               <CalendarIcon className="w-4 h-4" />
@@ -371,8 +375,8 @@ export const ItineraryViewPage: FC = () => {
                     {/* Concentric Bullseye Node */}
                     <div
                       className={`w-5 h-5 rounded-full flex items-center justify-center border-4 ${index === 0
-                          ? 'border-teal-500 bg-white ring-2 ring-teal-100'
-                          : 'border-slate-300 bg-white'
+                        ? 'border-teal-500 bg-white ring-2 ring-teal-100'
+                        : 'border-slate-300 bg-white'
                         }`}
                     >
                       <div
@@ -436,8 +440,8 @@ export const ItineraryViewPage: FC = () => {
                         <div className="shrink-0">
                           <span
                             className={`px-3.5 py-1.5 rounded-full text-xs font-bold ${act.isFree
-                                ? 'bg-slate-100 text-slate-700'
-                                : 'bg-[#FFF7ED] text-[#EA580C] border border-[#FFEDD5]'
+                              ? 'bg-slate-100 text-slate-700'
+                              : 'bg-[#FFF7ED] text-[#EA580C] border border-[#FFEDD5]'
                               }`}
                           >
                             {act.isFree ? 'Free' : `$${act.cost}`}
@@ -650,8 +654,8 @@ export const ItineraryViewPage: FC = () => {
                   <span>New Balance:</span>
                   <span
                     className={`font-bold ${tempBudget - calculatedTotalCost < 0
-                        ? 'text-red-600'
-                        : 'text-emerald-600'
+                      ? 'text-red-600'
+                      : 'text-emerald-600'
                       }`}
                   >
                     ${tempBudget - calculatedTotalCost}
