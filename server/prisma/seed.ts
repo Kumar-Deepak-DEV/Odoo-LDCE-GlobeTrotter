@@ -1,5 +1,5 @@
 import { PrismaClient, Role, TripStatus, ActivityCategory, CostLevel } from '@prisma/client';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -8,35 +8,59 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Starting exact seeder for GlobeTrotter Hackathon...');
 
+  const adminPassword = process.env.ADMIN_SEED_PASSWORD;
+  const adminEmail = process.env.ADMIN_SEED_EMAIL || 'admin@globetrotter.com';
+  const demoPassword = process.env.DEMO_SEED_PASSWORD;
+  const demoEmail = process.env.DEMO_SEED_EMAIL || 'demo@globetrotter.com';
+
+  if (!adminPassword || !demoPassword) {
+    console.warn(
+      '\n⚠️  [SEED SKIPPED] ADMIN_SEED_PASSWORD and/or DEMO_SEED_PASSWORD are not configured in .env.\n' +
+      '   Skipping database seeding to protect against unconfigured or insecure credentials.\n' +
+      '   To seed demo and admin accounts, add ADMIN_SEED_PASSWORD and DEMO_SEED_PASSWORD to your .env file.\n'
+    );
+    return;
+  }
+
   // Upsert Admin User
-  const adminPasswordHash = await bcrypt.hash(process.env.ADMIN_SEED_PASSWORD || 'Admin@2024', 10);
+  const adminPasswordHash = await bcrypt.hash(adminPassword, 10);
   const adminUser = await prisma.user.upsert({
-    where: { email: process.env.ADMIN_SEED_EMAIL || 'admin@globetrotter.com' },
-    update: {},
+    where: { email: adminEmail },
+    update: {
+      photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+      bio: 'GlobeTrotter platform administrator and avid world explorer.'
+    },
     create: {
-      email: process.env.ADMIN_SEED_EMAIL || 'admin@globetrotter.com',
+      email: adminEmail,
       firstName: 'Admin',
       lastName: 'User',
       passwordHash: adminPasswordHash,
       role: Role.ADMIN,
       city: 'San Francisco',
-      country: 'USA'
+      country: 'USA',
+      photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+      bio: 'GlobeTrotter platform administrator and avid world explorer.'
     }
   });
 
   // Upsert Demo User
-  const demoPasswordHash = await bcrypt.hash('Demo@2024', 10);
+  const demoPasswordHash = await bcrypt.hash(demoPassword, 10);
   const demoUser = await prisma.user.upsert({
-    where: { email: 'demo@globetrotter.com' },
-    update: {},
+    where: { email: demoEmail },
+    update: {
+      photoUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80',
+      bio: 'Passionate travel enthusiast visiting 30 countries before 30.'
+    },
     create: {
-      email: 'demo@globetrotter.com',
+      email: demoEmail,
       firstName: 'Demo',
       lastName: 'User',
       passwordHash: demoPasswordHash,
       role: Role.USER,
       city: 'New York',
-      country: 'USA'
+      country: 'USA',
+      photoUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80',
+      bio: 'Passionate travel enthusiast visiting 30 countries before 30.'
     }
   });
 
@@ -48,10 +72,12 @@ async function main() {
         userId: demoUser.id,
         name: 'European Highlights',
         description: 'A 10-day tour exploring Paris, Rome, and Barcelona.',
+        coverPhotoUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1200&q=80',
         startDate: new Date('2025-05-10T00:00:00Z'),
         endDate: new Date('2025-05-20T00:00:00Z'),
         status: TripStatus.UPCOMING,
         isPublic: true,
+        shareSlug: 'european-highlights-demo',
         stops: {
           create: [
             {
@@ -112,6 +138,14 @@ async function main() {
         }
       }
     });
+  } else {
+    await prisma.trip.update({
+      where: { id: trip1.id },
+      data: {
+        coverPhotoUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1200&q=80',
+        shareSlug: trip1.shareSlug || 'european-highlights-demo'
+      }
+    });
   }
 
   // Create demo trip 2: Asian Getaway
@@ -122,6 +156,7 @@ async function main() {
         userId: demoUser.id,
         name: 'Asian Getaway',
         description: 'A 12-day immersive experience in Tokyo, Kyoto, and Bangkok.',
+        coverPhotoUrl: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=1200&q=80',
         startDate: new Date('2025-09-01T00:00:00Z'),
         endDate: new Date('2025-09-12T00:00:00Z'),
         status: TripStatus.UPCOMING,
@@ -185,6 +220,13 @@ async function main() {
         }
       }
     });
+  } else {
+    await prisma.trip.update({
+      where: { id: trip2.id },
+      data: {
+        coverPhotoUrl: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=1200&q=80'
+      }
+    });
   }
   
   // Create demo trip 3: South American Explorer
@@ -195,10 +237,12 @@ async function main() {
         userId: demoUser.id,
         name: 'South American Explorer',
         description: '14 days across Rio, Buenos Aires, and Lima.',
+        coverPhotoUrl: 'https://images.unsplash.com/photo-1483729558449-99ef09a8c325?auto=format&fit=crop&w=1200&q=80',
         startDate: new Date('2025-11-01T00:00:00Z'),
         endDate: new Date('2025-11-14T00:00:00Z'),
         status: TripStatus.UPCOMING,
         isPublic: true,
+        shareSlug: 'south-american-explorer-demo',
         stops: {
           create: [
             {
@@ -254,6 +298,14 @@ async function main() {
             }
           ]
         }
+      }
+    });
+  } else {
+    await prisma.trip.update({
+      where: { id: trip3.id },
+      data: {
+        coverPhotoUrl: 'https://images.unsplash.com/photo-1483729558449-99ef09a8c325?auto=format&fit=crop&w=1200&q=80',
+        shareSlug: trip3.shareSlug || 'south-american-explorer-demo'
       }
     });
   }

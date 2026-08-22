@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import authRoutes from '../../../../Odoo-LDCE-GlobeTrotter12/server/src/modules/auth/auth.routes';
+import authRoutes from '../modules/auth/auth.routes';
 import userRoutes from '../modules/user/user.routes';
 import tripRoutes from '../modules/trip/trip.routes';
 import { stopRouter, tripStopsRouter } from '../modules/stop/stop.routes';

@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../../config/prisma';
 import { sendSuccess } from '../../utils/response';
 import { AppError } from '../../utils/appError';
-import { UpdateProfileInput } from '../../../../../Odoo-LDCE-GlobeTrotter12/server/src/modules/auth/auth.schema';
+import { UpdateProfileInput } from '../auth/auth.schema';
 
 export class UserController {
   public static async getProfile(req: Request, res: Response, next: NextFunction): Promise<void> {

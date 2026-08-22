@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { UserController } from './user.controller';
 import { validate } from '../../middleware/validate';
 import { authenticateToken } from '../../middleware/auth';
-import { updateProfileSchema } from '../../../../../Odoo-LDCE-GlobeTrotter12/server/src/modules/auth/auth.schema';
+import { updateProfileSchema } from '../auth/auth.schema';
 
 const router = Router();
 

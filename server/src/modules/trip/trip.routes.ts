@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { TripController } from './trip.controller';
-import { BudgetController } from '../../../../../Odoo-LDCE-GlobeTrotter12/server/src/modules/budget/budget.controller';
+import { BudgetController } from '../budget/budget.controller';
 import { validate } from '../../middleware/validate';
 import { authenticateToken, optionalAuthenticateToken } from '../../middleware/auth';
 import {
