@@ -14,16 +14,102 @@ import {
   Plus,
   Calendar,
   Users,
+  Plane,
+  Sun,
+  Sparkles,
+  CheckCheck,
+  Trash2,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+
+export interface NotificationItem {
+  id: string;
+  type: 'trip' | 'collab' | 'alert' | 'system';
+  title: string;
+  message: string;
+  time: string;
+  read: boolean;
+  link: string;
+}
+
+const INITIAL_NOTIFICATIONS: NotificationItem[] = [
+  {
+    id: 'notif-1',
+    type: 'trip',
+    title: 'Upcoming: Aegean Odyssey',
+    message: 'Your Aegean cruise begins soon. Day 4: Mykonos Exploration is scheduled!',
+    time: '15m ago',
+    read: false,
+    link: '/calendar',
+  },
+  {
+    id: 'notif-2',
+    type: 'collab',
+    title: 'Co-Planning Update',
+    message: 'Elena added "Fushimi Inari Shrine" to your Kyoto Autumn itinerary.',
+    time: '1h ago',
+    read: false,
+    link: '/trips',
+  },
+  {
+    id: 'notif-3',
+    type: 'alert',
+    title: 'Weather Update',
+    message: 'Sunny skies forecasted for Pacific Northwest Roadtrip this weekend.',
+    time: '4h ago',
+    read: false,
+    link: '/calendar',
+  },
+  {
+    id: 'notif-4',
+    type: 'system',
+    title: 'AI Smart Recommendation',
+    message: 'We discovered 3 hidden cafes near your stay in Tokyo!',
+    time: '1d ago',
+    read: true,
+    link: '/search',
+  },
+];
 
 export const Navbar: FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [hasNotifications, setHasNotifications] = useState(true);
+  const [activeNotifTab, setActiveNotifTab] = useState<'all' | 'trip' | 'alert'>('all');
+  const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const handleMarkAllRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const handleClearAll = () => {
+    setNotifications([]);
+  };
+
+  const handleDismissNotif = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  const handleNotificationClick = (item: NotificationItem) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === item.id ? { ...n, read: true } : n))
+    );
+    setShowNotifications(false);
+    navigate(item.link);
+  };
+
+  const filteredNotifications = notifications.filter((n) => {
+    if (activeNotifTab === 'all') return true;
+    if (activeNotifTab === 'trip') return n.type === 'trip' || n.type === 'collab';
+    if (activeNotifTab === 'alert') return n.type === 'alert' || n.type === 'system';
+    return true;
+  });
 
   const navLinks = [
     { label: 'Explore', href: '/dashboard' },
@@ -109,18 +195,181 @@ export const Navbar: FC = () => {
             <span>Add Trip</span>
           </Link>
 
-          {/* Notification Bell */}
-          <button
-            type="button"
-            onClick={() => setHasNotifications(false)}
-            aria-label="Notifications"
-            className="relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
-          >
-            <Bell className="w-5 h-5 stroke-[1.8]" />
-            {hasNotifications && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full ring-2 ring-white" />
+          {/* Functional Notification Bell & Dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setShowNotifications(!showNotifications);
+                setShowProfileMenu(false);
+              }}
+              aria-label="Notifications"
+              className={`relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors cursor-pointer ${
+                showNotifications ? 'bg-blue-50 text-blue-600 ring-2 ring-blue-200' : ''
+              }`}
+            >
+              <Bell className="w-5 h-5 stroke-[1.8]" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-blue-600 text-white text-[10px] font-bold rounded-full ring-2 ring-white flex items-center justify-center animate-pulse">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {/* Notification Dropdown Menu */}
+            {showNotifications && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowNotifications(false)}
+                />
+                <div className="absolute right-0 sm:right-auto sm:-left-36 lg:right-0 lg:left-auto mt-2 w-80 sm:w-96 bg-white rounded-3xl shadow-2xl border border-slate-200/90 py-3 z-50 animate-fadeIn">
+                  {/* Header */}
+                  <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-heading font-bold text-base text-slate-900">
+                        Notifications
+                      </h3>
+                      {unreadCount > 0 && (
+                        <span className="text-[11px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                          {unreadCount} new
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      {unreadCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleMarkAllRead}
+                          title="Mark all as read"
+                          className="p-1.5 text-xs text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          <CheckCheck className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline text-[11px]">Mark read</span>
+                        </button>
+                      )}
+                      {notifications.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleClearAll}
+                          title="Clear all"
+                          className="p-1.5 text-xs text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Filter Pills */}
+                  <div className="px-4 py-2 flex items-center gap-1.5 border-b border-slate-100/60 bg-slate-50/50">
+                    {(['all', 'trip', 'alert'] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        type="button"
+                        onClick={() => setActiveNotifTab(tab)}
+                        className={`px-3 py-1 text-xs font-semibold rounded-lg capitalize transition-colors cursor-pointer ${
+                          activeNotifTab === tab
+                            ? 'bg-white text-blue-600 shadow-2xs border border-slate-200/80'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        {tab === 'all' ? 'All' : tab === 'trip' ? 'Trips' : 'Alerts'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Notification List */}
+                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                    {filteredNotifications.length === 0 ? (
+                      <div className="py-8 px-4 text-center">
+                        <Bell className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                        <p className="text-xs font-semibold text-slate-600">No notifications</p>
+                        <p className="text-[11px] text-slate-400">You're all caught up with your trips!</p>
+                      </div>
+                    ) : (
+                      filteredNotifications.map((notif) => {
+                        return (
+                          <div
+                            key={notif.id}
+                            onClick={() => handleNotificationClick(notif)}
+                            className={`p-3.5 hover:bg-slate-50/80 transition-colors cursor-pointer flex items-start gap-3 relative group ${
+                              !notif.read ? 'bg-blue-50/30' : ''
+                            }`}
+                          >
+                            {/* Icon badge based on type */}
+                            <div
+                              className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center mt-0.5 ${
+                                notif.type === 'trip'
+                                  ? 'bg-blue-100 text-blue-600'
+                                  : notif.type === 'collab'
+                                  ? 'bg-teal-100 text-teal-600'
+                                  : notif.type === 'alert'
+                                  ? 'bg-amber-100 text-amber-600'
+                                  : 'bg-purple-100 text-purple-600'
+                              }`}
+                            >
+                              {notif.type === 'trip' && <Plane className="w-4 h-4" />}
+                              {notif.type === 'collab' && <Users className="w-4 h-4" />}
+                              {notif.type === 'alert' && <Sun className="w-4 h-4" />}
+                              {notif.type === 'system' && <Sparkles className="w-4 h-4" />}
+                            </div>
+
+                            {/* Content */}
+                            <div className="flex-1 min-w-0 pr-4">
+                              <div className="flex items-center justify-between gap-1">
+                                <h4
+                                  className={`text-xs font-heading truncate ${
+                                    !notif.read
+                                      ? 'font-bold text-slate-900'
+                                      : 'font-medium text-slate-700'
+                                  }`}
+                                >
+                                  {notif.title}
+                                </h4>
+                                <span className="text-[10px] text-slate-400 shrink-0">
+                                  {notif.time}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-500 mt-0.5 leading-snug">
+                                {notif.message}
+                              </p>
+                            </div>
+
+                            {/* Unread indicator / Dismiss */}
+                            {!notif.read && (
+                              <span className="w-2 h-2 rounded-full bg-blue-600 absolute right-3 top-4" />
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => handleDismissNotif(notif.id, e)}
+                              className="opacity-0 group-hover:opacity-100 absolute right-2.5 bottom-2.5 p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 rounded-md transition-all cursor-pointer"
+                              title="Dismiss"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Footer Link to Calendar */}
+                  <div className="p-2.5 border-t border-slate-100 bg-slate-50/50 text-center">
+                    <Link
+                      to="/calendar"
+                      onClick={() => setShowNotifications(false)}
+                      className="text-xs font-bold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1"
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>View Full Trip Calendar</span>
+                    </Link>
+                  </div>
+                </div>
+              </>
             )}
-          </button>
+          </div>
 
           {/* Saved / Favorites Trigger */}
           <Link
