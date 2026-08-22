@@ -290,7 +290,9 @@ export const TravelBuddiesPage: FC = () => {
                         <div className="flex items-center gap-1.5">
                           <h4 className="font-heading font-bold text-sm text-slate-900">{post.hostName}</h4>
                           {post.isVerified && (
-                            <ShieldCheck className="w-4 h-4 text-blue-600" title="Verified Traveler" />
+                            <span title="Verified Traveler" className="inline-flex">
+                              <ShieldCheck className="w-4 h-4 text-blue-600" />
+                            </span>
                           )}
                         </div>
                         <p className="text-xs text-slate-400">{post.hostCity}</p>

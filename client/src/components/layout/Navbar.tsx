@@ -131,7 +131,7 @@ export const Navbar: FC = () => {
     <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-slate-100 transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
         {/* Voyago Brand Logo */}
-        <VoyagoLogo asLink size="md" />
+        <VoyagoLogo asLink href="/dashboard" size="md" />
 
         {/* Center Navigation Links */}
         <nav className="hidden lg:flex items-center gap-7">
@@ -165,16 +165,14 @@ export const Navbar: FC = () => {
           {isAuthenticated && isAdmin && (
             <Link
               to="/admin"
-              className={`relative py-2 text-sm font-semibold transition-colors ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
                 location.pathname === '/admin'
-                  ? 'text-indigo-600'
-                  : 'text-slate-600 hover:text-indigo-600'
+                  ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-200'
+                  : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800'
               }`}
             >
-              Admin
-              {location.pathname === '/admin' && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-full animate-fadeIn" />
-              )}
+              <Shield className="w-3.5 h-3.5" />
+              <span>Admin Portal</span>
             </Link>
           )}
         </nav>

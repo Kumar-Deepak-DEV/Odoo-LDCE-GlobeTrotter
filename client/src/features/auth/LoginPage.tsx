@@ -76,8 +76,16 @@ export const LoginPage: FC = () => {
       const data = await authApi.login({ email: email.trim(), password });
       if (data?.token && data?.user) {
         login(data.token, data.user);
-        setSuccessMessage('Login successful! Redirecting...');
-        setTimeout(() => navigate('/dashboard'), 500);
+        const isAdminUser = data.user.role === 'ADMIN';
+        const destination = isAdminUser ? '/admin' : '/dashboard';
+        
+        setSuccessMessage(
+          isAdminUser
+            ? 'Admin login successful! Directing to Admin Panel...'
+            : 'Login successful! Redirecting to Dashboard...'
+        );
+        
+        setTimeout(() => navigate(destination), 400);
         return;
       }
     } catch (err: unknown) {
@@ -289,7 +297,6 @@ export const LoginPage: FC = () => {
           <div
             className="absolute inset-0 overflow-hidden transition-all duration-700"
             style={{
-              // Asymmetrical corner radii: heavy top-left and bottom-right rounding, subtle top-right and bottom-left
               borderRadius: '35% 4% 35% 4%',
             }}
           >

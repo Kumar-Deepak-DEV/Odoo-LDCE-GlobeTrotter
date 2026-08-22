@@ -7,6 +7,7 @@ import { ProtectedRoute } from '../components/layout/ProtectedRoute';
 import { NotFoundPage } from '../components/layout/NotFoundPage';
 
 // Feature Pages
+import { LandingPage } from '../features/landing/LandingPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
@@ -32,26 +33,33 @@ import { SupportPage } from '../features/static/SupportPage';
 import { ContactPage } from '../features/static/ContactPage';
 import { AboutPage } from '../features/static/AboutPage';
 
-// Root redirect helper component
-const RootRedirect: FC = () => {
+// Root component: If user is not authenticated, show the rich Landing Page; if logged in, go to Dashboard
+const RootPage: FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />;
+  if (!isAuthenticated) {
+    return <LandingPage />;
+  }
+
+  return <Navigate to="/dashboard" replace />;
 };
 
 export const AppRoutes: FC = () => {
   return (
     <Routes>
-      {/* Root redirect */}
-      <Route path="/" element={<RootRedirect />} />
+      {/* Root Path: Shows Landing Page if unauthenticated, or redirects to Dashboard if logged in */}
+      <Route path="/" element={<RootPage />} />
+
+      {/* Dedicated Landing Page Route */}
+      <Route path="/landing" element={<LandingPage />} />
 
       {/* Public Auth Routes */}
       <Route path="/login" element={<LoginPage />} />

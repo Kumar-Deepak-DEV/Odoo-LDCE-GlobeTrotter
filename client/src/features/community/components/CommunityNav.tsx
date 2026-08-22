@@ -6,7 +6,6 @@ import {
   Users,
   Trophy,
   BookOpen,
-  Sparkles,
   Plus,
 } from 'lucide-react';
 

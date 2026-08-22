@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import type { FC, FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Search,
   Pencil,
@@ -17,6 +17,9 @@ import {
   Plus,
   ShieldCheck,
   AlertTriangle,
+  Compass,
+  LogOut,
+  User as UserIcon,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { adminApi } from '../../api/adminApi';
@@ -104,7 +107,14 @@ const INITIAL_ACTIVITIES: PopularActivityStat[] = [
 ];
 
 export const AdminPage: FC = () => {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   // Top Nav active tab
   const [activeNavTab, setActiveNavTab] = useState<'Dashboard' | 'Users' | 'Analytics' | 'Settings'>('Dashboard');
@@ -206,7 +216,7 @@ export const AdminPage: FC = () => {
       <header className="sticky top-0 z-40 w-full bg-white border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           {/* Logo */}
-          <Link to="/dashboard" className="flex items-center gap-2">
+          <Link to="/admin" className="flex items-center gap-2">
             <span className="font-heading font-bold text-2xl text-blue-600 tracking-tight">
               GlobeTrotter
             </span>
@@ -242,7 +252,17 @@ export const AdminPage: FC = () => {
           </nav>
 
           {/* Right Action Items */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            {/* Quick Link to Traveler App */}
+            <Link
+              to="/dashboard"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all"
+              title="Switch to Traveler View"
+            >
+              <Compass className="w-3.5 h-3.5 text-blue-600" />
+              <span className="hidden sm:inline">Traveler View</span>
+            </Link>
+
             <button
               type="button"
               aria-label="Admin Notifications"
@@ -262,21 +282,75 @@ export const AdminPage: FC = () => {
             <button
               type="button"
               onClick={() => setShowSupportModal(true)}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-sm rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+              className="hidden sm:flex px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-xs rounded-xl shadow-sm transition-all items-center gap-1.5 cursor-pointer"
             >
               <span>Support</span>
             </button>
 
-            {/* Admin Avatar */}
-            <div className="w-9 h-9 rounded-full object-cover ring-2 ring-teal-200 overflow-hidden ml-1">
-              <img
-                src={
-                  user?.photoUrl ||
-                  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
-                }
-                alt="Admin avatar"
-                className="w-full h-full object-cover"
-              />
+            {/* Admin Avatar & Dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="w-9 h-9 rounded-full object-cover ring-2 ring-indigo-200 overflow-hidden ml-1 flex items-center justify-center cursor-pointer hover:ring-indigo-400 transition-all"
+              >
+                <img
+                  src={
+                    user?.photoUrl ||
+                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+                  }
+                  alt="Admin avatar"
+                  className="w-full h-full object-cover"
+                />
+              </button>
+
+              {showProfileMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowProfileMenu(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 animate-fadeIn">
+                    <div className="px-4 py-2.5 border-b border-slate-100">
+                      <p className="text-sm font-semibold text-slate-900">
+                        {user?.firstName} {user?.lastName}
+                      </p>
+                      <p className="text-xs text-indigo-600 font-bold uppercase tracking-wider">
+                        Administrator
+                      </p>
+                    </div>
+
+                    <Link
+                      to="/profile"
+                      onClick={() => setShowProfileMenu(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                      <UserIcon className="w-4 h-4 text-slate-400" />
+                      My Profile
+                    </Link>
+
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setShowProfileMenu(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 transition-colors"
+                    >
+                      <Compass className="w-4 h-4 text-blue-600" />
+                      Traveler Dashboard
+                    </Link>
+
+                    <div className="border-t border-slate-100 my-1" />
+
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer text-left"
+                    >
+                      <LogOut className="w-4 h-4 text-red-500" />
+                      Log Out
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

@@ -48,8 +48,9 @@ export const SignupPage: FC = () => {
       const data = await authApi.register(formData);
       if (data?.token && data?.user) {
         login(data.token, data.user);
+        const destination = data.user.role === 'ADMIN' ? '/admin' : '/dashboard';
         setSuccessMessage('Account created successfully! Redirecting...');
-        setTimeout(() => navigate('/dashboard'), 600);
+        setTimeout(() => navigate(destination), 500);
         return;
       }
     } catch (err: unknown) {
