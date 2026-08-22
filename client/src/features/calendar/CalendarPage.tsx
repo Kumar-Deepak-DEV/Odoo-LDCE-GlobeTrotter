@@ -14,6 +14,73 @@ import {
 import { Navbar } from '../../components/layout/Navbar';
 import { Footer } from '../../components/layout/Footer';
 
+export interface CalendarTrip {
+  id: string;
+  title: string;
+  subtitle: string;
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  status: 'ongoing' | 'upcoming' | 'completed';
+  color: string;
+}
+
+const DEFAULT_TRIPS: CalendarTrip[] = [
+  {
+    id: 'trip-kyoto',
+    title: 'Kyoto Autumn',
+    subtitle: 'Day 1: Arashiyama Bamboo Grove & Gion',
+    startDate: '2024-01-02',
+    endDate: '2024-01-06',
+    status: 'completed',
+    color: '#64748B', // Slate gray
+  },
+  {
+    id: 'trip-aegean',
+    title: 'Aegean Odyssey',
+    subtitle: 'Day 4: Mykonos Exploration',
+    startDate: '2024-01-12',
+    endDate: '2024-01-18',
+    status: 'ongoing',
+    color: '#2563EB', // Royal blue
+  },
+  {
+    id: 'trip-pnw',
+    title: 'PNW Roadtrip',
+    subtitle: 'Day 1: Seattle to Olympic National Park',
+    startDate: '2024-01-28',
+    endDate: '2024-02-03',
+    status: 'upcoming',
+    color: '#14B8A6', // Vibrant teal/green
+  },
+  {
+    id: 'trip-alpine',
+    title: 'Swiss Alps Expedition',
+    subtitle: 'Day 2: Zermatt & Matterhorn Glacier Trail',
+    startDate: '2024-02-12',
+    endDate: '2024-02-18',
+    status: 'upcoming',
+    color: '#14B8A6',
+  },
+  {
+    id: 'trip-sakura',
+    title: 'Tokyo Cherry Blossom',
+    subtitle: 'Day 3: Shinjuku Gyoen & Meguro River',
+    startDate: '2024-03-20',
+    endDate: '2024-03-27',
+    status: 'upcoming',
+    color: '#2563EB',
+  },
+  {
+    id: 'trip-amalfi',
+    title: 'Amalfi Coast Getaway',
+    subtitle: 'Day 2: Positano Cliffside & Capri Boat Tour',
+    startDate: '2024-04-14',
+    endDate: '2024-04-20',
+    status: 'upcoming',
+    color: '#14B8A6',
+  },
+];
+
 export const CalendarPage: FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'ongoing' | 'upcoming' | 'completed'>('all');
@@ -21,16 +88,47 @@ export const CalendarPage: FC = () => {
 
   // Month Date State (Default Jan 2024 matching reference mockup)
   const [currentDate, setCurrentDate] = useState<Date>(new Date(2024, 0, 1));
+  const [allTrips] = useState<CalendarTrip[]>(() => {
+    try {
+      const savedCustom = JSON.parse(
+        localStorage.getItem('globetrotter_custom_trips') || '[]'
+      );
+      if (Array.isArray(savedCustom) && savedCustom.length > 0) {
+        const mapped: CalendarTrip[] = savedCustom.map((t: {
+          id: string;
+          name?: string;
+          title?: string;
+          startDate?: string;
+          endDate?: string;
+          status?: 'ongoing' | 'upcoming' | 'completed';
+        }) => ({
+          id: t.id,
+          title: t.name || t.title || 'Custom Adventure',
+          subtitle: 'Custom Day Exploration',
+          startDate: t.startDate ? t.startDate.split('T')[0] : '2024-01-10',
+          endDate: t.endDate ? t.endDate.split('T')[0] : '2024-01-16',
+          status: t.status || 'upcoming',
+          color: t.status === 'ongoing' ? '#2563EB' : t.status === 'completed' ? '#64748B' : '#14B8A6',
+        }));
+        return [...DEFAULT_TRIPS, ...mapped];
+      }
+    } catch {
+      // Ignore parse errors
+    }
+    return DEFAULT_TRIPS;
+  });
 
-  // Selected Day Popover (Default Day 15 Aegean Odyssey matching mockup)
+  // Selected Day Popover
   const [activePopover, setActivePopover] = useState<{
     dayNumber: number;
+    monthStr: string;
     tripTitle: string;
     subtitle: string;
     status: 'ongoing' | 'upcoming' | 'completed';
     tripId: string;
   } | null>({
     dayNumber: 15,
+    monthStr: 'Jan 15',
     tripTitle: 'Aegean Odyssey',
     subtitle: 'Day 4: Mykonos Exploration',
     status: 'ongoing',
@@ -44,16 +142,19 @@ export const CalendarPage: FC = () => {
 
   const handlePrevMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    setActivePopover(null);
   };
 
   const handleNextMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    setActivePopover(null);
   };
 
   const handleTodayClick = () => {
     setCurrentDate(new Date(2024, 0, 1));
     setActivePopover({
       dayNumber: 15,
+      monthStr: 'Jan 15',
       tripTitle: 'Aegean Odyssey',
       subtitle: 'Day 4: Mykonos Exploration',
       status: 'ongoing',
@@ -61,244 +162,140 @@ export const CalendarPage: FC = () => {
     });
   };
 
-  // January 2024 7x5 Calendar Grid Data
-  // Jan 1 2024 starts on Monday. Sunday Dec 31 is previous month.
-  const calendarDays = useMemo(() => {
-    return [
-      // Row 1 (Dec 31 to Jan 6)
-      { day: 31, isCurrentMonth: false, isTrip: false, trip: null, isStart: false },
-      { day: 1, isCurrentMonth: true, isTrip: false, trip: null, isStart: false },
-      {
-        day: 2,
-        isCurrentMonth: true,
-        isTrip: true,
-        trip: {
-          id: 'trip-kyoto',
-          title: 'Kyoto Autumn',
-          subtitle: 'Day 1: Arashiyama Bamboo Grove',
-          status: 'completed' as const,
-          color: '#64748B', // slate-500 matching reference
-        },
-        isStart: true,
-      },
-      {
-        day: 3,
-        isCurrentMonth: true,
-        isTrip: true,
-        trip: {
-          id: 'trip-kyoto',
-          title: 'Kyoto Autumn',
-          subtitle: 'Day 2: Fushimi Inari & Gion',
-          status: 'completed' as const,
-          color: '#64748B',
-        },
-        isStart: false,
-      },
-      {
-        day: 4,
-        isCurrentMonth: true,
-        isTrip: true,
-        trip: {
-          id: 'trip-kyoto',
-          title: 'Kyoto Autumn',
-          subtitle: 'Day 3: Kinkaku-ji Temple',
-          status: 'completed' as const,
-          color: '#64748B',
-        },
-        isStart: false,
-      },
-      {
-        day: 5,
-        isCurrentMonth: true,
-        isTrip: true,
-        trip: {
-          id: 'trip-kyoto',
-          title: 'Kyoto Autumn',
-          subtitle: 'Day 4: Kiyomizu-dera & Tea Ceremony',
-          status: 'completed' as const,
-          color: '#64748B',
-        },
-        isStart: false,
-      },
-      {
-        day: 6,
-        isCurrentMonth: true,
-        isTrip: true,
-        trip: {
-          id: 'trip-kyoto',
-          title: 'Kyoto Autumn',
-          subtitle: 'Day 5: Nara Deer Park Excursion',
-          status: 'completed' as const,
-          color: '#64748B',
-        },
-        isStart: false,
-      },
+  // Format date helper: YYYY-MM-DD
+  const formatDateISO = (d: Date): string => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
 
-      // Row 2 (Jan 7 to Jan 13)
-      { day: 7, isCurrentMonth: true, isTrip: false, trip: null, isStart: false },
-      { day: 8, isCurrentMonth: true, isTrip: false, trip: null, isStart: false },
-      { day: 9, isCurrentMonth: true, isTrip: false, trip: null, isStart: false },
-      { day: 10, isCurrentMonth: true, isTrip: false, trip: null, isStart: false },
-      { day: 11, isCurrentMonth: true, isTrip: false, trip: null, isStart: false },
-      {
-        day: 12,
-        isCurrentMonth: true,
-        isTrip: true,
-        trip: {
-          id: 'trip-aegean',
-          title: 'Aegean Odyssey',
-          subtitle: 'Day 1: Athens Acropolis & Plaka',
-          status: 'ongoing' as const,
-          color: '#2563EB', // royal blue
-        },
-        isStart: true,
-      },
-      {
-        day: 13,
-        isCurrentMonth: true,
-        isTrip: true,
-        trip: {
-          id: 'trip-aegean',
-          title: 'Aegean Odyssey',
-          subtitle: 'Day 2: Santorini Sunset Cruise',
-          status: 'ongoing' as const,
-          color: '#2563EB',
-        },
-        isStart: false,
-      },
+  // Dynamically compute calendar days for the selected month & year
+  const calendarCells = useMemo(() => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
 
-      // Row 3 (Jan 14 to Jan 20)
-      { day: 14, isCurrentMonth: true, isTrip: false, trip: null, isStart: false },
-      {
-        day: 15,
-        isCurrentMonth: true,
-        isRingDay: true, // green/teal outlined ring on day 15
-        isTrip: false,
-        trip: null,
-        isStart: false,
-      },
-      { day: 16, isCurrentMonth: true, isTrip: false, trip: null, isStart: false },
-      {
-        day: 17,
-        isCurrentMonth: true,
-        isSolidBlueDay: true, // solid blue filled circle on day 17
-        isTrip: false,
-        trip: null,
-        isStart: false,
-      },
-      { day: 18, isCurrentMonth: true, isTrip: false, trip: null, isStart: false },
-      { day: 19, isCurrentMonth: true, isTrip: false, trip: null, isStart: false },
-      { day: 20, isCurrentMonth: true, isTrip: false, trip: null, isStart: false },
+    // First day of current month (0=Sun, 1=Mon, ..., 6=Sat)
+    const firstDayIndex = new Date(year, month, 1).getDay();
 
-      // Row 4 (Jan 21 to Jan 27)
-      { day: 21, isCurrentMonth: true, isTrip: false, trip: null, isStart: false },
-      { day: 22, isCurrentMonth: true, isTrip: false, trip: null, isStart: false },
-      { day: 23, isCurrentMonth: true, isTrip: false, trip: null, isStart: false },
-      { day: 24, isCurrentMonth: true, isTrip: false, trip: null, isStart: false },
-      { day: 25, isCurrentMonth: true, isTrip: false, trip: null, isStart: false },
-      { day: 26, isCurrentMonth: true, isTrip: false, trip: null, isStart: false },
-      { day: 27, isCurrentMonth: true, isTrip: false, trip: null, isStart: false },
+    // Number of days in current month
+    const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
 
-      // Row 5 (Jan 28 to Feb 3) - PNW Roadtrip spans entire row
-      {
-        day: 28,
-        isCurrentMonth: true,
-        isTrip: true,
-        trip: {
-          id: 'trip-pnw',
-          title: 'PNW Roadtrip',
-          subtitle: 'Day 1: Seattle to Olympic National Park',
-          status: 'upcoming' as const,
-          color: '#14B8A6', // vibrant teal/green
-        },
-        isStart: true,
-      },
-      {
-        day: 29,
-        isCurrentMonth: true,
-        isTrip: true,
-        trip: {
-          id: 'trip-pnw',
-          title: 'PNW Roadtrip',
-          subtitle: 'Day 2: Ruby Beach & Hoh Rain Forest',
-          status: 'upcoming' as const,
-          color: '#14B8A6',
-        },
-        isStart: false,
-      },
-      {
-        day: 30,
-        isCurrentMonth: true,
-        isTrip: true,
-        trip: {
-          id: 'trip-pnw',
-          title: 'PNW Roadtrip',
-          subtitle: 'Day 3: Cannon Beach & Oregon Coast',
-          status: 'upcoming' as const,
-          color: '#14B8A6',
-        },
-        isStart: false,
-      },
-      {
-        day: 31,
-        isCurrentMonth: true,
-        isTrip: true,
-        trip: {
-          id: 'trip-pnw',
-          title: 'PNW Roadtrip',
-          subtitle: 'Day 4: Columbia River Gorge',
-          status: 'upcoming' as const,
-          color: '#14B8A6',
-        },
-        isStart: false,
-      },
-      {
-        day: 1,
+    // Number of days in previous month
+    const totalDaysInPrevMonth = new Date(year, month, 0).getDate();
+
+    const cells: {
+      date: Date;
+      dateStr: string;
+      day: number;
+      isCurrentMonth: boolean;
+      isRingDay: boolean;
+      isSolidBlueDay: boolean;
+      trip: CalendarTrip | null;
+      isStart: boolean;
+    }[] = [];
+
+    // Filter trips by status and search query
+    const activeTripsList = allTrips.filter((t) => {
+      const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
+      const matchesSearch =
+        !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesStatus && matchesSearch;
+    });
+
+    // 1. Previous month trailing days
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+      const dayNum = totalDaysInPrevMonth - i;
+      const d = new Date(year, month - 1, dayNum);
+      const dStr = formatDateISO(d);
+
+      // Check for trip spanning this date
+      const matchingTrip = activeTripsList.find(
+        (t) => t.startDate <= dStr && dStr <= t.endDate
+      ) || null;
+
+      const isStart = matchingTrip
+        ? matchingTrip.startDate === dStr || d.getDay() === 0
+        : false;
+
+      cells.push({
+        date: d,
+        dateStr: dStr,
+        day: dayNum,
         isCurrentMonth: false,
-        isTrip: true,
-        trip: {
-          id: 'trip-pnw',
-          title: 'PNW Roadtrip',
-          subtitle: 'Day 5: Mount Rainier Scenic Trails',
-          status: 'upcoming' as const,
-          color: '#14B8A6',
-        },
-        isStart: false,
-      },
-      {
-        day: 2,
-        isCurrentMonth: false,
-        isTrip: true,
-        trip: {
-          id: 'trip-pnw',
-          title: 'PNW Roadtrip',
-          subtitle: 'Day 6: Portland Craft Coffee & Food Tour',
-          status: 'upcoming' as const,
-          color: '#14B8A6',
-        },
-        isStart: false,
-      },
-      {
-        day: 3,
-        isCurrentMonth: false,
-        isTrip: true,
-        trip: {
-          id: 'trip-pnw',
-          title: 'PNW Roadtrip',
-          subtitle: 'Day 7: Departure & Farewell',
-          status: 'upcoming' as const,
-          color: '#14B8A6',
-        },
-        isStart: false,
-      },
-    ];
-  }, []);
+        isRingDay: false,
+        isSolidBlueDay: false,
+        trip: matchingTrip,
+        isStart,
+      });
+    }
 
-  const handleCellClick = (cell: (typeof calendarDays)[0]) => {
+    // 2. Current month days (1 to totalDaysInMonth)
+    for (let dayNum = 1; dayNum <= totalDaysInMonth; dayNum++) {
+      const d = new Date(year, month, dayNum);
+      const dStr = formatDateISO(d);
+
+      // Check for trip spanning this date
+      const matchingTrip = activeTripsList.find(
+        (t) => t.startDate <= dStr && dStr <= t.endDate
+      ) || null;
+
+      const isStart = matchingTrip
+        ? matchingTrip.startDate === dStr || d.getDay() === 0
+        : false;
+
+      // Special highlight days (Jan 15 & Jan 17 matching mockup design)
+      const isRingDay = year === 2024 && month === 0 && dayNum === 15;
+      const isSolidBlueDay = year === 2024 && month === 0 && dayNum === 17;
+
+      cells.push({
+        date: d,
+        dateStr: dStr,
+        day: dayNum,
+        isCurrentMonth: true,
+        isRingDay,
+        isSolidBlueDay,
+        trip: matchingTrip,
+        isStart,
+      });
+    }
+
+    // 3. Next month leading days to fill 35 or 42 grid cells (5 or 6 complete weeks)
+    const targetCellCount = cells.length <= 35 ? 35 : 42;
+    const remainingCells = targetCellCount - cells.length;
+
+    for (let dayNum = 1; dayNum <= remainingCells; dayNum++) {
+      const d = new Date(year, month + 1, dayNum);
+      const dStr = formatDateISO(d);
+
+      const matchingTrip = activeTripsList.find(
+        (t) => t.startDate <= dStr && dStr <= t.endDate
+      ) || null;
+
+      const isStart = matchingTrip
+        ? matchingTrip.startDate === dStr || d.getDay() === 0
+        : false;
+
+      cells.push({
+        date: d,
+        dateStr: dStr,
+        day: dayNum,
+        isCurrentMonth: false,
+        isRingDay: false,
+        isSolidBlueDay: false,
+        trip: matchingTrip,
+        isStart,
+      });
+    }
+
+    return cells;
+  }, [currentDate, allTrips, statusFilter, searchQuery]);
+
+  const handleCellClick = (cell: (typeof calendarCells)[0]) => {
     if (cell.trip) {
-      // If trip matches search/status filter
       setActivePopover({
         dayNumber: cell.day,
+        monthStr: cell.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         tripTitle: cell.trip.title,
         subtitle: cell.trip.subtitle,
         status: cell.trip.status,
@@ -307,6 +304,7 @@ export const CalendarPage: FC = () => {
     } else if (cell.isRingDay) {
       setActivePopover({
         dayNumber: 15,
+        monthStr: 'Jan 15',
         tripTitle: 'Aegean Odyssey',
         subtitle: 'Day 4: Mykonos Exploration',
         status: 'ongoing',
@@ -403,7 +401,7 @@ export const CalendarPage: FC = () => {
 
         {/* MAIN CALENDAR CARD (Matching Reference Image) */}
         <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 sm:p-8 space-y-6">
-          {/* Header inside Card: Month Title + Chevrons on Right */}
+          {/* Header inside Card: Dynamic Month Title + Chevrons on Right */}
           <div className="flex items-center justify-between">
             <h2 className="text-2xl sm:text-3xl font-extrabold font-heading text-slate-900 tracking-tight">
               {monthTitle}
@@ -430,7 +428,7 @@ export const CalendarPage: FC = () => {
             </div>
           </div>
 
-          {/* CALENDAR GRID */}
+          {/* DYNAMIC CALENDAR GRID */}
           <div className="border border-slate-200/80 rounded-2xl overflow-visible shadow-2xs bg-white">
             {/* Weekdays Row */}
             <div className="grid grid-cols-7 border-b border-slate-200/80 bg-white">
@@ -444,33 +442,20 @@ export const CalendarPage: FC = () => {
               ))}
             </div>
 
-            {/* Days Grid (7 columns x 5 rows) */}
+            {/* Dynamic Days Grid */}
             <div className="grid grid-cols-7 relative divide-x divide-y divide-slate-100">
-              {calendarDays.map((cell, idx) => {
-                const isDecOrFeb = !cell.isCurrentMonth;
+              {calendarCells.map((cell, idx) => {
+                const isOverflow = !cell.isCurrentMonth;
                 const isRing = cell.isRingDay;
                 const isSolidBlue = cell.isSolidBlueDay;
-                const hasTrip = cell.isTrip && cell.trip;
-
-                // Match filter
-                const matchesFilter =
-                  !hasTrip ||
-                  statusFilter === 'all' ||
-                  cell.trip?.status === statusFilter;
-
-                const matchesSearch =
-                  !hasTrip ||
-                  !searchQuery ||
-                  cell.trip?.title.toLowerCase().includes(searchQuery.toLowerCase());
-
-                const isVisibleTrip = hasTrip && matchesFilter && matchesSearch;
+                const hasTrip = !!cell.trip;
 
                 return (
                   <div
                     key={idx}
                     onClick={() => handleCellClick(cell)}
                     className={`min-h-[105px] sm:min-h-[115px] p-2.5 relative transition-colors cursor-pointer ${
-                      isDecOrFeb ? 'bg-white' : 'bg-white hover:bg-slate-50/50'
+                      isOverflow ? 'bg-white' : 'bg-white hover:bg-slate-50/50'
                     }`}
                   >
                     {/* Day Number / Ring / Solid Circle */}
@@ -486,7 +471,7 @@ export const CalendarPage: FC = () => {
                       ) : (
                         <span
                           className={`text-xs font-semibold ${
-                            isDecOrFeb ? 'text-slate-300' : 'text-slate-800'
+                            isOverflow ? 'text-slate-300' : 'text-slate-800'
                           }`}
                         >
                           {cell.day}
@@ -495,7 +480,7 @@ export const CalendarPage: FC = () => {
                     </div>
 
                     {/* Continuous Multi-Day Trip Span Bar */}
-                    {isVisibleTrip && cell.trip && (
+                    {hasTrip && cell.trip && (
                       <div
                         style={{ backgroundColor: cell.trip.color }}
                         className={`absolute left-0 right-0 bottom-4 sm:bottom-5 py-1 px-2 text-[11px] font-bold text-white truncate shadow-2xs transition-all hover:brightness-110 ${
@@ -506,7 +491,7 @@ export const CalendarPage: FC = () => {
                       </div>
                     )}
 
-                    {/* Interactive Popover Tooltip for Day 15 (as shown in reference image) */}
+                    {/* Interactive Popover Tooltip */}
                     {isRing && activePopover && (
                       <div
                         onClick={(e) => e.stopPropagation()}
@@ -574,13 +559,15 @@ export const CalendarPage: FC = () => {
           </div>
         </div>
 
-        {/* BOTTOM 3 FEATURED CARDS (Matching Reference Image) */}
+        {/* BOTTOM 3 FEATURED CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
           {/* Card 1: NEXT ADVENTURE - Pacific Northwest */}
           <div
             onClick={() => {
+              setCurrentDate(new Date(2024, 0, 1));
               setActivePopover({
                 dayNumber: 28,
+                monthStr: 'Jan 28',
                 tripTitle: 'PNW Roadtrip',
                 subtitle: 'Day 1: Seattle to Olympic National Park',
                 status: 'upcoming',
@@ -608,8 +595,10 @@ export const CalendarPage: FC = () => {
           {/* Card 2: RECENTLY VISITED - Kyoto, Japan */}
           <div
             onClick={() => {
+              setCurrentDate(new Date(2024, 0, 1));
               setActivePopover({
                 dayNumber: 2,
+                monthStr: 'Jan 2',
                 tripTitle: 'Kyoto Autumn',
                 subtitle: 'Day 1: Arashiyama Bamboo Grove',
                 status: 'completed',
