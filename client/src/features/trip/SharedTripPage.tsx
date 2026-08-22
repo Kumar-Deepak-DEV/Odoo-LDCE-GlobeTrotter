@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { FC } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
@@ -14,74 +14,124 @@ import {
   Check,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { tripApi } from '../../api/tripApi';
+import type { Trip } from '../../types';
 
 export const SharedTripPage: FC = () => {
-  const { id } = useParams<{ id?: string }>();
+  const { slug, id } = useParams<{ slug?: string; id?: string }>();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
+  const [loadedTrip, setLoadedTrip] = useState<Trip | null>(null);
 
-  // Trip Information matching mockup
+  const lookupKey = slug || id || 'european-adventure-2024';
+
+  const loadPublicTrip = useCallback(async () => {
+    try {
+      const data = await tripApi.getPublicTrip(lookupKey);
+      if (data?.trip) {
+        setLoadedTrip(data.trip);
+      }
+    } catch {
+      // Keep fallback trip
+    }
+  }, [lookupKey]);
+
+  useEffect(() => {
+    loadPublicTrip();
+  }, [loadPublicTrip]);
+
+  // Trip Information matching loaded or fallback mockup
   const trip = {
-    id: id || 'share-1',
-    title: 'European Highlights',
-    author: 'Alex Mercer',
+    id: loadedTrip?.id || id || 'share-1',
+    title: loadedTrip?.name || 'European Highlights',
+    author: loadedTrip?.user ? `${loadedTrip.user.firstName} ${loadedTrip.user.lastName}` : 'GlobeTrotter Explorer',
     authorAvatar:
+      loadedTrip?.user?.photoUrl ||
       'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
-    dates: 'Oct 12 - Oct 25, 2024',
+    dates: loadedTrip?.startDate && loadedTrip?.endDate
+      ? `${new Date(loadedTrip.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(loadedTrip.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+      : 'Oct 12 - Oct 25, 2024',
     isPublic: true,
-    coverImage: '/images/adventure-mountain.jpg',
+    coverImage: loadedTrip?.coverPhotoUrl || '/images/adventure-mountain.jpg',
     description:
+      loadedTrip?.description ||
       "A curated journey through Europe's most iconic cities, focusing on hidden gems and culinary delights.",
-    stops: [
-      {
-        id: 'stop-1',
-        cityName: 'Paris, France',
-        days: [
+    stops: loadedTrip?.stops && loadedTrip.stops.length > 0
+      ? loadedTrip.stops.map((s) => ({
+          id: s.id,
+          cityName: s.country ? `${s.cityName}, ${s.country}` : s.cityName,
+          days: [
+            {
+              dayNumber: 1,
+              activities: (s.activities || []).map((act) => ({
+                id: act.id,
+                name: act.name,
+                durationMin: act.durationMin || 60,
+                cost: Number(act.cost) > 0 ? `$${act.cost}` : 'Free',
+                category: act.category || 'Sightseeing',
+                icon: act.category?.toLowerCase() === 'food' ? 'utensils' : 'landmark',
+              })),
+            },
+          ],
+        }))
+      : [
           {
-            dayNumber: 1,
-            activities: [
+            id: 'stop-1',
+            cityName: 'Paris, France',
+            days: [
               {
-                id: 'act-1',
-                name: 'Louvre Museum',
-                durationMin: 120,
-                cost: '$45',
-                category: 'Culture',
-                icon: 'landmark',
+                dayNumber: 1,
+                activities: [
+                  {
+                    id: 'act-1',
+                    name: 'Louvre Museum',
+                    durationMin: 120,
+                    cost: '$45',
+                    category: 'Culture',
+                    icon: 'landmark',
+                  },
+                  {
+                    id: 'act-2',
+                    name: 'Dinner at Le Marais',
+                    durationMin: 90,
+                    cost: '$80',
+                    category: 'Food',
+                    icon: 'utensils',
+                  },
+                ],
               },
               {
-                id: 'act-2',
-                name: 'Dinner at Le Marais',
-                durationMin: 90,
-                cost: '$80',
-                category: 'Food',
-                icon: 'utensils',
-              },
-            ],
-          },
-          {
-            dayNumber: 2,
-            activities: [
-              {
-                id: 'act-3',
-                name: 'Montmartre Walking Tour',
-                durationMin: 180,
-                cost: 'Free',
-                category: 'Sightseeing',
-                icon: 'footprints',
+                dayNumber: 2,
+                activities: [
+                  {
+                    id: 'act-3',
+                    name: 'Montmartre Walking Tour',
+                    durationMin: 180,
+                    cost: 'Free',
+                    category: 'Sightseeing',
+                    icon: 'footprints',
+                  },
+                ],
               },
             ],
           },
         ],
-      },
-    ],
   };
 
-  const handleCopyTrip = () => {
+  const handleCopyTrip = async () => {
     setIsCopied(true);
-    setToastMessage('Trip cloned to your itineraries!');
+    setToastMessage('Cloning trip to your itineraries...');
+
+    if (isAuthenticated && loadedTrip?.id) {
+      try {
+        await tripApi.copyTrip(loadedTrip.id);
+      } catch {
+        // Fallback handled
+      }
+    }
 
     setTimeout(() => {
       setToastMessage(null);
@@ -90,7 +140,7 @@ export const SharedTripPage: FC = () => {
       } else {
         navigate('/signup?redirect=/trips');
       }
-    }, 1500);
+    }, 1200);
   };
 
   const handleCopyLink = () => {

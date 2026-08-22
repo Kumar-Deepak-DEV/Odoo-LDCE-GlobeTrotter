@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import type { FC } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { Navbar } from '../../components/layout/Navbar';
 import { Footer } from '../../components/layout/Footer';
+import { tripApi } from '../../api/tripApi';
+import type { Trip } from '../../types';
 
 export interface TripListItem {
   id: string;
@@ -28,7 +30,7 @@ export interface TripListItem {
   image: string;
 }
 
-const INITIAL_TRIPS: TripListItem[] = [
+const DEFAULT_TRIPS: TripListItem[] = [
   {
     id: 'trip-aegean',
     title: 'Aegean Odyssey',
@@ -77,51 +79,60 @@ export const MyTripsPage: FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'startDate' | 'title' | 'stops'>('startDate');
   const [isPublicOnly, setIsPublicOnly] = useState(false);
-  const [trips, setTrips] = useState<TripListItem[]>(INITIAL_TRIPS);
+  const [trips, setTrips] = useState<TripListItem[]>(DEFAULT_TRIPS);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
-  // Load custom created trips if available
-  useEffect(() => {
-    try {
-      const customTrips = JSON.parse(
-        localStorage.getItem('globetrotter_custom_trips') || '[]'
-      );
-      if (customTrips && Array.isArray(customTrips) && customTrips.length > 0) {
-        const formattedCustom: TripListItem[] = customTrips.map(
-          (t: {
-            id: string;
-            name?: string;
-            title?: string;
-            startDate?: string;
-            endDate?: string;
-            isPublic?: boolean;
-            coverPhotoUrl?: string;
-            stops?: unknown[];
-          }) => ({
-            id: t.id,
-            title: t.name || t.title || 'Untitled Trip',
-            destination: 'Custom Destination',
-            startDate: t.startDate ? t.startDate.split('T')[0] : '2024-10-12',
-            endDate: t.endDate ? t.endDate.split('T')[0] : '2024-10-20',
-            displayDates: 'Oct 12, 2024 - Oct 20, 2024',
-            stopsCount: t.stops?.length || 2,
-            isPublic: !!t.isPublic,
-            status: 'UPCOMING',
-            image: t.coverPhotoUrl || '/images/adventure-mountain.jpg',
-          })
-        );
+  const formatTripToListItem = (t: Trip): TripListItem => {
+    const dest = t.stops && t.stops.length > 0 ? t.stops.map((s) => s.cityName).join(', ') : 'Custom Trip';
+    const sDate = t.startDate ? new Date(t.startDate) : new Date();
+    const eDate = t.endDate ? new Date(t.endDate) : new Date();
+    const sStr = sDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const eStr = eDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-        // Deduplicate against existing initial trips
-        setTrips((prev) => {
-          const ids = new Set(prev.map((p) => p.id));
-          const toAdd = formattedCustom.filter((c) => !ids.has(c.id));
-          return [...toAdd, ...prev];
-        });
+    return {
+      id: t.id,
+      title: t.name,
+      destination: dest,
+      startDate: t.startDate ? t.startDate.split('T')[0] : '',
+      endDate: t.endDate ? t.endDate.split('T')[0] : '',
+      displayDates: `${sStr} - ${eStr}`,
+      stopsCount: t.stops?.length || 0,
+      isPublic: !!t.isPublic,
+      status: t.status || 'UPCOMING',
+      image: t.coverPhotoUrl || '/images/adventure-mountain.jpg',
+    };
+  };
+
+  const fetchTripsFromBackend = useCallback(async () => {
+    try {
+      const res = await tripApi.getTrips();
+      if (res?.trips && res.trips.length > 0) {
+        const formatted = res.trips.map(formatTripToListItem);
+        setTrips(formatted);
       }
     } catch {
-      // Ignore parse errors
+      // Fallback: check localStorage for custom trips
+      try {
+        const customTrips = JSON.parse(
+          localStorage.getItem('globetrotter_custom_trips') || '[]'
+        );
+        if (customTrips && Array.isArray(customTrips) && customTrips.length > 0) {
+          const formattedCustom: TripListItem[] = customTrips.map(formatTripToListItem);
+          setTrips((prev) => {
+            const ids = new Set(prev.map((p) => p.id));
+            const toAdd = formattedCustom.filter((c) => !ids.has(c.id));
+            return [...toAdd, ...prev];
+          });
+        }
+      } catch {
+        // Ignore parse errors
+      }
     }
   }, []);
+
+  useEffect(() => {
+    fetchTripsFromBackend();
+  }, [fetchTripsFromBackend]);
 
   // Filtered & Sorted Trips
   const processedTrips = useMemo(() => {
@@ -155,10 +166,17 @@ export const MyTripsPage: FC = () => {
     [processedTrips]
   );
 
-  const handleDeleteTrip = () => {
+  const handleDeleteTrip = async () => {
     if (!deleteTargetId) return;
-    setTrips((prev) => prev.filter((t) => t.id !== deleteTargetId));
+    const targetId = deleteTargetId;
     setDeleteTargetId(null);
+    setTrips((prev) => prev.filter((t) => t.id !== targetId));
+
+    try {
+      await tripApi.deleteTrip(targetId);
+    } catch {
+      // Deletion from local state already performed
+    }
   };
 
   return (
@@ -286,7 +304,7 @@ export const MyTripsPage: FC = () => {
 
                       <button
                         type="button"
-                        onClick={() => navigate(`/trips/${trip.id}/builder`)}
+                        onClick={() => navigate(`/trips/${trip.id}`)}
                         className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-sm rounded-xl shadow-sm hover:shadow transition-all cursor-pointer"
                       >
                         View Itinerary
@@ -376,7 +394,7 @@ export const MyTripsPage: FC = () => {
 
                       <button
                         type="button"
-                        onClick={() => navigate(`/trips/${trip.id}/builder`)}
+                        onClick={() => navigate(`/trips/${trip.id}`)}
                         className="px-4 py-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold text-xs rounded-xl transition-colors cursor-pointer"
                       >
                         View

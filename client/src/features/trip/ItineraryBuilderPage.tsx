@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { FC, FormEvent } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
@@ -23,6 +23,9 @@ import {
 } from 'lucide-react';
 import { Navbar } from '../../components/layout/Navbar';
 import { Footer } from '../../components/layout/Footer';
+import { tripApi } from '../../api/tripApi';
+import { stopApi } from '../../api/stopApi';
+import { activityApi } from '../../api/activityApi';
 
 interface ActivityItem {
   id: string;
@@ -46,7 +49,7 @@ interface StopSection {
   activities: ActivityItem[];
 }
 
-const INITIAL_STOPS: StopSection[] = [
+const DEFAULT_BUILDER_STOPS: StopSection[] = [
   {
     id: 'stop-paris',
     city: 'Paris',
@@ -63,7 +66,7 @@ const INITIAL_STOPS: StopSection[] = [
         durationMin: 90,
         cost: 45,
         category: 'museum',
-        categoryColor: '#F97316', // Orange dot
+        categoryColor: '#F97316',
       },
       {
         id: 'act-2',
@@ -72,7 +75,7 @@ const INITIAL_STOPS: StopSection[] = [
         durationMin: 120,
         cost: 250,
         category: 'food',
-        categoryColor: '#EF4444', // Red dot
+        categoryColor: '#EF4444',
       },
       {
         id: 'act-3',
@@ -82,7 +85,7 @@ const INITIAL_STOPS: StopSection[] = [
         cost: 0,
         isFree: true,
         category: 'walking',
-        categoryColor: '#14B8A6', // Teal dot
+        categoryColor: '#14B8A6',
       },
     ],
   },
@@ -102,7 +105,7 @@ const INITIAL_STOPS: StopSection[] = [
         durationMin: 160,
         cost: 120,
         category: 'entertainment',
-        categoryColor: '#F97316', // Orange dot
+        categoryColor: '#F97316',
       },
       {
         id: 'act-5',
@@ -111,7 +114,7 @@ const INITIAL_STOPS: StopSection[] = [
         durationMin: 120,
         cost: 35,
         category: 'landmark',
-        categoryColor: '#14B8A6', // Teal dot
+        categoryColor: '#14B8A6',
       },
     ],
   },
@@ -121,9 +124,10 @@ export const ItineraryBuilderPage: FC = () => {
   const { id } = useParams<{ id?: string }>();
 
   const [tripTitle, setTripTitle] = useState('European Adventure');
-  const [tripDates] = useState('Oct 12 - Oct 25, 2024');
-  const [tripDuration] = useState('14 Days');
-  const [stops, setStops] = useState<StopSection[]>(INITIAL_STOPS);
+  const [tripDates, setTripDates] = useState('Oct 12 - Oct 25, 2024');
+  const [tripDuration, setTripDuration] = useState('14 Days');
+  const [stops, setStops] = useState<StopSection[]>(DEFAULT_BUILDER_STOPS);
+  const [shareSlug, setShareSlug] = useState<string | null>(null);
 
   // Modals state
   const [showAddActivityModal, setShowAddActivityModal] = useState<string | null>(null); // stopId
@@ -145,9 +149,69 @@ export const ItineraryBuilderPage: FC = () => {
   const [newStopDates, setNewStopDates] = useState('');
   const [newStopBudget, setNewStopBudget] = useState(1000);
 
-  // Check if trip name exists in custom trips
-  useEffect(() => {
-    if (id) {
+  // Category Color Map
+  const categoryColors: Record<string, string> = {
+    museum: '#F97316',
+    food: '#EF4444',
+    walking: '#14B8A6',
+    entertainment: '#F97316',
+    landmark: '#14B8A6',
+    culture: '#F97316',
+    sightseeing: '#14B8A6',
+    adventure: '#0EA5E9',
+    other: '#3B82F6',
+  };
+
+  // Load real trip details from Backend API
+  const loadTripData = useCallback(async () => {
+    if (!id) return;
+    try {
+      const data = await tripApi.getTripById(id);
+      if (data?.trip) {
+        const t = data.trip;
+        setTripTitle(t.name);
+        if (t.shareSlug) {
+          setShareSlug(t.shareSlug);
+        }
+        if (t.startDate && t.endDate) {
+          const s = new Date(t.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          const e = new Date(t.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          setTripDates(`${s} - ${e}`);
+          const days = Math.max(1, Math.ceil((new Date(t.endDate).getTime() - new Date(t.startDate).getTime()) / (1000 * 60 * 60 * 24)));
+          setTripDuration(`${days} Days`);
+        }
+        if (t.stops && t.stops.length > 0) {
+          const formattedStops: StopSection[] = t.stops.map((s) => {
+            const sStart = s.startDate ? new Date(s.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+            const sEnd = s.endDate ? new Date(s.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+            return {
+              id: s.id,
+              city: s.cityName,
+              country: s.country || '',
+              dateRange: sStart && sEnd ? `${sStart} - ${sEnd}` : 'Dates set',
+              startDate: s.startDate ? s.startDate.split('T')[0] : '',
+              endDate: s.endDate ? s.endDate.split('T')[0] : '',
+              estimatedBudget: Number(s.budget) || 0,
+              activities: (s.activities || []).map((act) => {
+                const catLower = (act.category?.toLowerCase() || 'other') as ActivityItem['category'];
+                return {
+                  id: act.id,
+                  name: act.name,
+                  dayNumber: act.dayNumber || 1,
+                  durationMin: act.durationMin || 60,
+                  cost: Number(act.cost) || 0,
+                  isFree: Number(act.cost) === 0,
+                  category: catLower,
+                  categoryColor: categoryColors[catLower] || '#14B8A6',
+                };
+              }),
+            };
+          });
+          setStops(formattedStops);
+        }
+      }
+    } catch {
+      // Local fallback
       const savedTrips = JSON.parse(localStorage.getItem('globetrotter_custom_trips') || '[]');
       const found = savedTrips.find((t: { id: string; name: string }) => t.id === id);
       if (found?.name) {
@@ -155,6 +219,10 @@ export const ItineraryBuilderPage: FC = () => {
       }
     }
   }, [id]);
+
+  useEffect(() => {
+    loadTripData();
+  }, [loadTripData]);
 
   // Render category icon helper
   const renderCategoryIcon = (category: ActivityItem['category']) => {
@@ -174,33 +242,45 @@ export const ItineraryBuilderPage: FC = () => {
     }
   };
 
-  const handleAddActivitySubmit = (e: FormEvent) => {
+  const handleAddActivitySubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!showAddActivityModal || !newActName.trim()) return;
 
-    const colors: Record<ActivityItem['category'], string> = {
-      museum: '#F97316',
-      food: '#EF4444',
-      walking: '#14B8A6',
-      entertainment: '#F97316',
-      landmark: '#14B8A6',
-      other: '#3B82F6',
-    };
+    const targetStopId = showAddActivityModal;
+    let newActId = `act_${Date.now()}`;
+
+    // Backend activity creation
+    if (targetStopId && !targetStopId.startsWith('stop-') && !targetStopId.startsWith('stop_')) {
+      try {
+        const res = await activityApi.createActivity(targetStopId, {
+          name: newActName.trim(),
+          dayNumber: Number(newActDay) || 1,
+          durationMin: Number(newActDuration) || 60,
+          cost: Number(newActCost) || 0,
+          category: newActCategory.toUpperCase(),
+        });
+        if (res?.activity) {
+          newActId = res.activity.id;
+        }
+      } catch {
+        // Fallback local ID
+      }
+    }
 
     const newActivity: ActivityItem = {
-      id: `act_${Date.now()}`,
+      id: newActId,
       name: newActName.trim(),
       dayNumber: Number(newActDay) || 1,
       durationMin: Number(newActDuration) || 60,
       cost: Number(newActCost) || 0,
       isFree: Number(newActCost) === 0,
       category: newActCategory,
-      categoryColor: colors[newActCategory] || '#14B8A6',
+      categoryColor: categoryColors[newActCategory] || '#14B8A6',
     };
 
     setStops((prev) =>
       prev.map((stop) => {
-        if (stop.id === showAddActivityModal) {
+        if (stop.id === targetStopId) {
           return {
             ...stop,
             activities: [...stop.activities, newActivity],
@@ -218,17 +298,38 @@ export const ItineraryBuilderPage: FC = () => {
     setShowAddActivityModal(null);
   };
 
-  const handleAddStopSubmit = (e: FormEvent) => {
+  const handleAddStopSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!newStopCity.trim()) return;
 
+    let newStopId = `stop_${Date.now()}`;
+    const stopPayload = {
+      cityName: newStopCity.trim(),
+      country: newStopCountry.trim() || undefined,
+      startDate: new Date().toISOString(),
+      endDate: new Date(Date.now() + 4 * 86400000).toISOString(),
+      budget: Number(newStopBudget) || 1000,
+      order: stops.length + 1,
+    };
+
+    if (id && !id.startsWith('trip-') && !id.startsWith('trip_')) {
+      try {
+        const res = await stopApi.createStop(id, stopPayload);
+        if (res?.stop) {
+          newStopId = res.stop.id;
+        }
+      } catch {
+        // Fallback local
+      }
+    }
+
     const newStop: StopSection = {
-      id: `stop_${Date.now()}`,
+      id: newStopId,
       city: newStopCity.trim(),
       country: newStopCountry.trim() || 'Worldwide',
       dateRange: newStopDates.trim() || 'Dates TBD',
-      startDate: '2024-10-20',
-      endDate: '2024-10-24',
+      startDate: stopPayload.startDate.split('T')[0],
+      endDate: stopPayload.endDate.split('T')[0],
       estimatedBudget: Number(newStopBudget) || 1000,
       activities: [],
     };
@@ -243,7 +344,18 @@ export const ItineraryBuilderPage: FC = () => {
     setShowAddStopModal(false);
   };
 
-  const handleDeleteActivity = (stopId: string, activityId: string) => {
+  const handleDeleteStop = async (stopId: string) => {
+    setStops((prev) => prev.filter((s) => s.id !== stopId));
+    if (!stopId.startsWith('stop-') && !stopId.startsWith('stop_')) {
+      try {
+        await stopApi.deleteStop(stopId);
+      } catch {
+        // Handled in state
+      }
+    }
+  };
+
+  const handleDeleteActivity = async (stopId: string, activityId: string) => {
     setStops((prev) =>
       prev.map((stop) => {
         if (stop.id === stopId) {
@@ -255,10 +367,36 @@ export const ItineraryBuilderPage: FC = () => {
         return stop;
       })
     );
+
+    if (!activityId.startsWith('act-') && !activityId.startsWith('act_')) {
+      try {
+        await activityApi.deleteActivity(activityId);
+      } catch {
+        // Handled in state
+      }
+    }
   };
 
+  const handleOpenShareModal = async () => {
+    if (id && !id.startsWith('trip-') && !id.startsWith('trip_')) {
+      try {
+        const res = await tripApi.publishTrip(id);
+        if (res?.shareSlug) {
+          setShareSlug(res.shareSlug);
+        }
+      } catch {
+        // Handled
+      }
+    }
+    setShowShareModal(true);
+  };
+
+  const shareUrl = shareSlug
+    ? `${window.location.origin}/share/${shareSlug}`
+    : `${window.location.origin}/trips/${id || '1'}`;
+
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
+    navigator.clipboard.writeText(shareUrl);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };
@@ -295,7 +433,7 @@ export const ItineraryBuilderPage: FC = () => {
             {/* Share Button */}
             <button
               type="button"
-              onClick={() => setShowShareModal(true)}
+              onClick={handleOpenShareModal}
               className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm rounded-xl border border-slate-200 shadow-xs hover:shadow transition-all flex items-center gap-2 cursor-pointer"
             >
               <Share2 className="w-4 h-4 text-slate-600" />
@@ -342,14 +480,22 @@ export const ItineraryBuilderPage: FC = () => {
                     </div>
                   </div>
 
-                  {/* Date Range & Estimated Budget Badge */}
-                  <div className="flex items-center gap-3 text-right">
+                  {/* Date Range & Estimated Budget Badge & Delete Stop */}
+                  <div className="flex items-center gap-2.5 text-right">
                     <span className="text-xs sm:text-sm font-medium text-slate-600 hidden sm:inline">
                       {stop.dateRange}
                     </span>
                     <div className="bg-amber-50 text-amber-700 border border-amber-200/80 text-xs font-bold px-3 py-1 rounded-full shadow-xs">
                       Est. ${stop.estimatedBudget.toLocaleString()}
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteStop(stop.id)}
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                      title="Delete Stop"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
 

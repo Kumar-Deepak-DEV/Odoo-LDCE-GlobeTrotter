@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import type { FC, FormEvent } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
@@ -19,12 +19,15 @@ import {
 } from 'lucide-react';
 import { Navbar } from '../../components/layout/Navbar';
 import { Footer } from '../../components/layout/Footer';
+import { tripApi } from '../../api/tripApi';
+import { budgetApi } from '../../api/budgetApi';
+import type { TripBudgetAnalysis } from '../../api/budgetApi';
 
 interface ItineraryActivity {
   id: string;
   dayNumber: number;
   name: string;
-  category: 'Culture' | 'Food' | 'Sightseeing' | 'Adventure';
+  category: 'Culture' | 'Food' | 'Sightseeing' | 'Adventure' | 'Other';
   durationMin: number;
   cost: number;
   isFree?: boolean;
@@ -40,7 +43,7 @@ interface ItineraryStop {
   activities: ItineraryActivity[];
 }
 
-const INITIAL_STOPS: ItineraryStop[] = [
+const DEFAULT_VIEW_STOPS: ItineraryStop[] = [
   {
     id: 'stop-paris',
     cityName: 'Paris',
@@ -97,23 +100,105 @@ export const ItineraryViewPage: FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Trip Information
-  const [tripTitle] = useState('European Highlights');
-  const [tripDates] = useState('Oct 12 - Oct 25, 2024');
-  const [tripDurationDays] = useState(14);
+  const [tripTitle, setTripTitle] = useState('European Highlights');
+  const [tripDates, setTripDates] = useState('Oct 12 - Oct 25, 2024');
+  const [tripDurationDays, setTripDurationDays] = useState(14);
 
   // Budget State
   const [totalBudget, setTotalBudget] = useState(2200);
-  const [stops] = useState<ItineraryStop[]>(INITIAL_STOPS);
+  const [stops, setStops] = useState<ItineraryStop[]>(DEFAULT_VIEW_STOPS);
+  const [budgetData, setBudgetData] = useState<TripBudgetAnalysis | null>(null);
 
   // Adjust Budget Modal State
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [tempBudget, setTempBudget] = useState(totalBudget);
 
+  const loadTripAndBudget = useCallback(async () => {
+    if (!id) return;
+    try {
+      const [tripRes, budgetRes] = await Promise.allSettled([
+        tripApi.getTripById(id),
+        budgetApi.getTripBudget(id),
+      ]);
+
+      if (tripRes.status === 'fulfilled' && tripRes.value?.trip) {
+        const t = tripRes.value.trip;
+        setTripTitle(t.name);
+        if (t.startDate && t.endDate) {
+          const s = new Date(t.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          const e = new Date(t.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          setTripDates(`${s} - ${e}`);
+          const days = Math.max(1, Math.ceil((new Date(t.endDate).getTime() - new Date(t.startDate).getTime()) / (1000 * 60 * 60 * 24)));
+          setTripDurationDays(days);
+        }
+
+        if (t.stops && t.stops.length > 0) {
+          let sumBudget = 0;
+          const formattedStops: ItineraryStop[] = t.stops.map((s) => {
+            const budgetVal = Number(s.budget) || 0;
+            sumBudget += budgetVal;
+            const acts: ItineraryActivity[] = (s.activities || []).map((act) => {
+              const catCap = act.category
+                ? (act.category.charAt(0).toUpperCase() + act.category.slice(1).toLowerCase()) as ItineraryActivity['category']
+                : 'Culture';
+              return {
+                id: act.id,
+                dayNumber: act.dayNumber || 1,
+                name: act.name,
+                category: catCap,
+                durationMin: act.durationMin || 60,
+                cost: Number(act.cost) || 0,
+                isFree: Number(act.cost) === 0,
+              };
+            });
+            const actSum = acts.reduce((acc, a) => acc + a.cost, 0);
+            return {
+              id: s.id,
+              cityName: s.cityName,
+              country: s.country || '',
+              budgetAllocated: budgetVal,
+              isOverBudget: budgetVal > 0 && actSum > budgetVal,
+              overBudgetAmount: actSum > budgetVal ? actSum - budgetVal : 0,
+              activities: acts,
+            };
+          });
+
+          setStops(formattedStops);
+          if (sumBudget > 0) {
+            setTotalBudget(sumBudget);
+            setTempBudget(sumBudget);
+          }
+        }
+      }
+
+      if (budgetRes.status === 'fulfilled' && budgetRes.value?.budget) {
+        setBudgetData(budgetRes.value.budget);
+        if (budgetRes.value.budget.totalBudget > 0) {
+          setTotalBudget(budgetRes.value.budget.totalBudget);
+          setTempBudget(budgetRes.value.budget.totalBudget);
+        }
+      }
+    } catch {
+      // Local fallback
+    }
+  }, [id]);
+
+  useEffect(() => {
+    loadTripAndBudget();
+  }, [loadTripAndBudget]);
+
   // Calculations
-  const totalEstimatedCost = 2450; // matching mockup
-  const balance = totalBudget - totalEstimatedCost;
+  const calculatedTotalCost = useMemo(() => {
+    if (budgetData?.totalEstimatedCost !== undefined) return budgetData.totalEstimatedCost;
+    return stops.reduce(
+      (acc, s) => acc + s.activities.reduce((aAcc, act) => aAcc + act.cost, 0),
+      0
+    );
+  }, [budgetData, stops]);
+
+  const balance = totalBudget - calculatedTotalCost;
   const isOverBudget = balance < 0;
-  const avgCostPerDay = Math.round(totalEstimatedCost / tripDurationDays);
+  const avgCostPerDay = Math.round(calculatedTotalCost / Math.max(1, tripDurationDays));
 
   // Filtered Stops based on Search
   const filteredStops = useMemo(() => {
@@ -379,7 +464,7 @@ export const ItineraryViewPage: FC = () => {
                     ESTIMATED COST
                   </div>
                   <div className="text-4xl sm:text-5xl font-extrabold font-heading text-white tracking-tight mt-1">
-                    ${totalEstimatedCost.toLocaleString()}
+                    ${calculatedTotalCost.toLocaleString()}
                   </div>
                 </div>
 
@@ -562,18 +647,18 @@ export const ItineraryViewPage: FC = () => {
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
                 <div className="flex justify-between text-slate-600">
                   <span>Estimated Cost:</span>
-                  <span className="font-bold text-slate-900">${totalEstimatedCost}</span>
+                  <span className="font-bold text-slate-900">${calculatedTotalCost}</span>
                 </div>
                 <div className="flex justify-between text-slate-600">
                   <span>New Balance:</span>
                   <span
                     className={`font-bold ${
-                      tempBudget - totalEstimatedCost < 0
+                      tempBudget - calculatedTotalCost < 0
                         ? 'text-red-600'
                         : 'text-emerald-600'
                     }`}
                   >
-                    ${tempBudget - totalEstimatedCost}
+                    ${tempBudget - calculatedTotalCost}
                   </span>
                 </div>
               </div>

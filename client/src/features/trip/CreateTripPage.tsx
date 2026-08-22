@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Navbar } from '../../components/layout/Navbar';
 import { Footer } from '../../components/layout/Footer';
-import { axiosInstance } from '../../api/axiosInstance';
+import { tripApi } from '../../api/tripApi';
 
 interface DestinationSuggestion {
   id: string;
@@ -222,19 +222,17 @@ export const CreateTripPage: FC = () => {
       endDate: new Date(endDate).toISOString(),
       isPublic,
       coverPhotoUrl: coverPhoto || '/images/adventure-mountain.jpg',
-      status: 'UPCOMING',
+      status: 'UPCOMING' as const,
     };
 
     try {
       // Send to backend API
-      const res = await axiosInstance.post('/trips', tripData);
-      const createdTrip = res.data?.data;
-      const tripId = createdTrip?.id || `trip_${Date.now()}`;
+      const data = await tripApi.createTrip(tripData);
+      const tripId = data?.trip?.id || `trip_${Date.now()}`;
       navigate(`/trips/${tripId}/builder`);
-    } catch {
-      // Mock creation fallback for demo
+    } catch (err: unknown) {
+      // Mock creation fallback for demo / offline
       const mockTripId = `trip_${Date.now()}`;
-      // Save to localStorage so other pages can access
       const savedTrips = JSON.parse(
         localStorage.getItem('globetrotter_custom_trips') || '[]'
       );

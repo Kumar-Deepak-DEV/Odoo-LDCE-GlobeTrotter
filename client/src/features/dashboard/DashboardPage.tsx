@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { FC, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -11,9 +11,16 @@ import {
   ChevronRight,
   ArrowRight,
   Check,
+  Calendar,
+  Compass,
+  DollarSign,
+  Sparkles,
 } from 'lucide-react';
 import { Navbar } from '../../components/layout/Navbar';
 import { Footer } from '../../components/layout/Footer';
+import { dashboardApi } from '../../api/dashboardApi';
+import type { DashboardStats } from '../../api/dashboardApi';
+import { useTrip } from '../../context/TripContext';
 
 interface RegionalDestination {
   id: string;
@@ -93,48 +100,12 @@ const REGIONAL_SELECTIONS: RegionalDestination[] = [
   },
 ];
 
-const PREVIOUS_TRIPS: PreviousTrip[] = [
-  {
-    id: 'trip-amalfi',
-    title: 'Amalfi Coast Escape',
-    location: 'Amalfi, Italy',
-    dates: 'Jun 12 - Jun 19, 2023',
-    startDate: '2023-06-12',
-    endDate: '2023-06-19',
-    image: '/images/amalfi.jpg',
-    isPopular: true,
-    region: 'Europe',
-    budget: 2400,
-    stopsCount: 3,
-  },
-  {
-    id: 'trip-scotland',
-    title: 'Scottish Highlands Tour',
-    location: 'Highlands, Scotland',
-    dates: 'Sep 05 - Sep 14, 2022',
-    startDate: '2022-09-05',
-    endDate: '2022-09-14',
-    image: '/images/scotland.jpg',
-    region: 'Europe',
-    budget: 1850,
-    stopsCount: 4,
-  },
-  {
-    id: 'trip-bangkok',
-    title: 'Bangkok City Break',
-    location: 'Bangkok, Thailand',
-    dates: 'Feb 20 - Feb 28, 2022',
-    startDate: '2022-02-20',
-    endDate: '2022-02-28',
-    image: '/images/bangkok.jpg',
-    region: 'Asia',
-    budget: 1200,
-    stopsCount: 2,
-  },
-];
-
 export const DashboardPage: FC = () => {
   const navigate = useNavigate();
+  const { trips } = useTrip();
+
+  // Backend Stats State
+  const [stats, setStats] = useState<DashboardStats | null>(null);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -149,6 +120,22 @@ export const DashboardPage: FC = () => {
 
   // Selected Destination Quick Modal
   const [selectedDestination, setSelectedDestination] = useState<RegionalDestination | null>(null);
+
+  // Fetch Dashboard Stats from Backend
+  useEffect(() => {
+    const loadDashboardStats = async () => {
+      try {
+        const data = await dashboardApi.getDashboardStats();
+        if (data?.stats) {
+          setStats(data.stats);
+        }
+      } catch {
+        // Fallback gracefully to client state
+      }
+    };
+
+    loadDashboardStats();
+  }, []);
 
   // Handle Search Submission
   const handleSearch = (e: FormEvent) => {
@@ -173,16 +160,77 @@ export const DashboardPage: FC = () => {
     });
   }, [searchQuery, selectedFilter, sortBy]);
 
-  // Filtered Previous Trips
+  // Real Trips from TripContext & Backend
+  const displayedTrips = useMemo<PreviousTrip[]>(() => {
+    if (trips && trips.length > 0) {
+      return trips.map((t) => {
+        const dest = t.stops && t.stops.length > 0 ? t.stops.map((s) => s.cityName).join(', ') : 'Adventure';
+        const start = t.startDate ? new Date(t.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+        const end = t.endDate ? new Date(t.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+        return {
+          id: t.id,
+          title: t.name,
+          location: dest,
+          dates: `${start} - ${end}`,
+          startDate: t.startDate,
+          endDate: t.endDate,
+          image: t.coverPhotoUrl || '/images/adventure-mountain.jpg',
+          region: 'Europe' as const,
+          stopsCount: t.stops?.length || 0,
+        };
+      });
+    }
+
+    return [
+      {
+        id: 'trip-amalfi',
+        title: 'Amalfi Coast Escape',
+        location: 'Amalfi, Italy',
+        dates: 'Jun 12 - Jun 19, 2024',
+        startDate: '2024-06-12',
+        endDate: '2024-06-19',
+        image: '/images/amalfi.jpg',
+        isPopular: true,
+        region: 'Europe',
+        budget: 2400,
+        stopsCount: 3,
+      },
+      {
+        id: 'trip-scotland',
+        title: 'Scottish Highlands Tour',
+        location: 'Highlands, Scotland',
+        dates: 'Sep 05 - Sep 14, 2024',
+        startDate: '2024-09-05',
+        endDate: '2024-09-14',
+        image: '/images/scotland.jpg',
+        region: 'Europe',
+        budget: 1850,
+        stopsCount: 4,
+      },
+      {
+        id: 'trip-bangkok',
+        title: 'Bangkok City Break',
+        location: 'Bangkok, Thailand',
+        dates: 'Oct 20 - Oct 28, 2024',
+        startDate: '2024-10-20',
+        endDate: '2024-10-28',
+        image: '/images/bangkok.jpg',
+        region: 'Asia',
+        budget: 1200,
+        stopsCount: 2,
+      },
+    ];
+  }, [trips]);
+
   const filteredTrips = useMemo(() => {
-    return PREVIOUS_TRIPS.filter((trip) => {
+    return displayedTrips.filter((trip) => {
       const matchesSearch =
         trip.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         trip.location.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesFilter = selectedFilter === 'all' || trip.region === selectedFilter;
       return matchesSearch && matchesFilter;
     });
-  }, [searchQuery, selectedFilter]);
+  }, [displayedTrips, searchQuery, selectedFilter]);
 
   const handleStartTripWithDestination = (cityName: string) => {
     navigate(`/trips/new?destination=${encodeURIComponent(cityName)}`);
@@ -235,6 +283,53 @@ export const DashboardPage: FC = () => {
             </div>
           </div>
         </section>
+
+        {/* LIVE METRICS CARDS (IF STATS AVAILABLE) */}
+        {stats && (
+          <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 animate-fadeIn">
+            <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <Compass className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Trips</p>
+                <h3 className="text-2xl font-bold text-slate-900 mt-0.5">{stats.totalTrips}</h3>
+              </div>
+            </div>
+
+            <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <Calendar className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Upcoming</p>
+                <h3 className="text-2xl font-bold text-slate-900 mt-0.5">{stats.upcomingCount}</h3>
+              </div>
+            </div>
+
+            <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Stops</p>
+                <h3 className="text-2xl font-bold text-slate-900 mt-0.5">{stats.totalStops}</h3>
+              </div>
+            </div>
+
+            <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
+                <DollarSign className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Budget</p>
+                <h3 className="text-2xl font-bold text-slate-900 mt-0.5">
+                  ${stats.totalEstimatedBudget.toLocaleString()}
+                </h3>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* FILTER / SORT / GROUP CONTROLS BAR */}
         <section className="flex flex-wrap items-center gap-3 pt-2">
